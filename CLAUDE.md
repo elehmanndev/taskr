@@ -2,13 +2,13 @@
 
 ## What This Is
 
-Open-source, self-hosted project management tool modeled after Monday.com. Multi-tenant, real-time, with an automation engine. Built for orgs of up to 250 users. Goal: replace Monday.com at Viajesparati (a travel company) and release as public GitHub repo.
+Open-source, self-hosted project management tool modeled after Monday.com. Multi-tenant, real-time, with an automation engine. Built for orgs of up to 250 users.
 
 ## Deployment Target
 
-**MVP:** Unraid server at home, exposed via Cloudflare Tunnel to `taskr.elehmann.dev`. No port forwarding, no exposed IP. All services run as Docker containers via Docker Compose.
+**MVP:** Self-hosted (e.g. Unraid, home server), exposed via Cloudflare Tunnel to a domain like `taskr.example.com`. No port forwarding, no exposed IP. All services run as Docker containers via Docker Compose.
 
-**Production (later):** Hetzner VPS on a Viajesparati subdomain, once the MVP is validated.
+**Production (later):** VPS on a dedicated subdomain, once the MVP is validated.
 
 ## Tech Stack
 
@@ -21,7 +21,7 @@ Open-source, self-hosted project management tool modeled after Monday.com. Multi
 - **Serve:** Nginx (serves built React app + proxies /api, /auth, /socket.io to backend)
 - **Infra:** Docker Compose (MySQL + Redis + server + client + Cloudflare tunnel)
 
-**NOTE:** Viajesparati's existing stack is PHP/Laravel. This project is intentionally a separate standalone service — it does NOT integrate into or depend on the Laravel codebase.
+**NOTE:** This project is designed as a standalone service. It does not depend on or integrate with any existing application stack.
 
 ## Project Structure
 
@@ -81,13 +81,13 @@ Any `VITE_*` variable must be passed as a `build.args` in `docker-compose.yml` A
 ### Nginx as single entry point
 - Client Nginx serves the React SPA on port 80 inside the container.
 - All `/api/*`, `/auth/*`, `/health`, and `/socket.io/*` requests are proxied to the `server` container on port 3001.
-- Cloudflare Tunnel points `taskr.elehmann.dev` → `http://client:80`.
-- This means the client's VITE_API_URL should be the same domain (e.g. `https://taskr.elehmann.dev`) — the nginx proxy handles routing.
+- Cloudflare Tunnel points `taskr.example.com` → `http://client:80`.
+- This means the client's VITE_API_URL should be the same domain (e.g. `https://taskr.example.com`) — the nginx proxy handles routing.
 
 ### Google OAuth with Cloudflare Tunnel
 - Google OAuth requires HTTPS + a real domain for redirect URLs.
 - Cloudflare Tunnel provides this for free — no certificates to manage.
-- Google Console authorized redirect URI: `https://taskr.elehmann.dev/auth/google/callback`
+- Google Console authorized redirect URI: `https://taskr.example.com/auth/google/callback`
 - The frontend uses Google Identity Services (Sign In With Google button) to get an ID token, then posts it to `/auth/google`.
 
 ## Data Model (Prisma — already scaffolded)
@@ -266,15 +266,15 @@ Events: `item:created`, `item:updated`, `item:deleted`, `items:reordered`, `grou
 JWT_SECRET=change-me-to-a-random-64-char-string
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 RESEND_API_KEY=re_xxxxxxxxxxxx
-EMAIL_FROM=Taskr <noreply@elehmann.dev>
-CLIENT_URL=https://taskr.elehmann.dev
+EMAIL_FROM=Taskr <noreply@example.com>
+CLIENT_URL=https://taskr.example.com
 
 # Database
 MYSQL_ROOT_PASSWORD=change-me
 MYSQL_PASSWORD=change-me
 
 # Client
-VITE_API_URL=https://taskr.elehmann.dev
+VITE_API_URL=https://taskr.example.com
 VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 
 # Cloudflare Tunnel
@@ -312,25 +312,14 @@ npx prisma studio                                         # visual DB browser
 1. Clone repo to Unraid (or any machine with Docker)
 2. Copy `.env.example` → `.env`, fill in all values
 3. Create Google OAuth credentials at https://console.cloud.google.com
-   - Authorized JavaScript origin: `https://taskr.elehmann.dev`
-   - Authorized redirect URI: `https://taskr.elehmann.dev`
+   - Authorized JavaScript origin: `https://taskr.example.com`
+   - Authorized redirect URI: `https://taskr.example.com`
 4. Create Cloudflare Tunnel at https://one.dash.cloudflare.com → Networks → Tunnels
-   - Add public hostname: `taskr.elehmann.dev` → `http://client:80`
+   - Add public hostname: `taskr.example.com` → `http://client:80`
    - Copy tunnel token to `.env`
 5. Create Resend account at https://resend.com, get API key
 6. `docker compose up -d`
-7. Visit `https://taskr.elehmann.dev`
-
-## Developer Context
-
-The developer (Eric) does NOT code in the traditional sense — he vibes, prompts, and pastes terminal commands. This means:
-
-- **Every command must be exact and copy-pasteable.** No pseudocode, no "adjust this to your setup", no `<placeholders>` without explaining exactly what to replace.
-- **Never assume he can debug.** If something might fail, include the fix inline or as an "if you see X, run Y" follow-up.
-- **Instructions must be sequential.** Step 1, step 2, step 3. Don't combine steps or skip assumed knowledge.
-- **When generating code, generate complete files.** No "add this to your existing file" without showing the full file or exact insertion point.
-- **If a command needs to run in a specific directory, always include the `cd` first.**
-- **Explain errors before they happen.** If a common gotcha exists (wrong Node version, missing env var, port conflict), mention it proactively.
+7. Visit `https://taskr.example.com`
 
 ## Conventions
 
@@ -341,7 +330,7 @@ The developer (Eric) does NOT code in the traditional sense — he vibes, prompt
 - Socket.io events are `entity:action` format (e.g. `item:created`)
 - All IDs are cuid strings
 - Dates stored as ISO strings in JSON, DATE type in dedicated columns
-- Concise code, minimal abstraction — this is a vibe-coded project, favor simplicity
+- Concise code, minimal abstraction — favor simplicity
 - No `@fastify/websocket` — Socket.io is the sole websocket layer
 - Nginx is the single entry point: serves SPA + proxies API + upgrades WebSocket
 - All API calls from client go to same origin (no CORS in production, nginx handles routing)
@@ -350,7 +339,7 @@ The developer (Eric) does NOT code in the traditional sense — he vibes, prompt
 
 **Status: not built yet. Build only after the GUI is feature-complete.**
 
-Eric wants Taskr to be manageable via Claude as well as the GUI. Once the web app stabilizes, we build a Model Context Protocol server that mirrors the Taskr REST API, so Claude (and other MCP clients) can create boards, move items, assign people, manage automations, etc., with natural-language prompts.
+Taskr should be manageable via MCP clients (Claude, etc.) as well as the GUI. Once the web app stabilizes, build a Model Context Protocol server that mirrors the Taskr REST API, so MCP clients can create boards, move items, assign people, manage automations, etc., with natural-language prompts.
 
 ### Design notes (for when we get to it)
 - Model on the `monday-api-mcp` server we reverse-engineered from (tool surface was highly granular: `create_item`, `change_item_column_values`, `move_item_to_group`, `get_board_schema`, `get_full_board_data`, `search`, `get_user_context`, `list_workspaces`, `create_notification`, `get_updates`, `create_update`, `get_column_type_info`, etc.). Aim for parity of concepts, not of tool names.

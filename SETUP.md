@@ -12,7 +12,7 @@ Taskr is **two apps and two data stores** glued together:
 ┌──────────────────────────────────────────────────────────┐
 │  Browser (you)                                           │
 └────────────────────────┬─────────────────────────────────┘
-                         │ https://taskr.elehmann.dev
+                         │ https://taskr.example.com
                          ▼
 ┌──────────────────────────────────────────────────────────┐
 │  Cloudflare Tunnel  ← makes your Unraid box public       │
@@ -57,7 +57,7 @@ All four run as Docker containers on Unraid. One `docker compose up -d` starts e
 | **Resend** | Email sending API | Free 3k/mo tier |
 | **Google OAuth** | Login | Users sign in with Google — no password to manage |
 | **Nginx** | Web server | Serves the built React app + proxies API calls to Fastify |
-| **Cloudflare Tunnel** | Public access | Makes `taskr.elehmann.dev` reach your Unraid box — no port forwarding, no firewall holes |
+| **Cloudflare Tunnel** | Public access | Makes `taskr.example.com` reach your Unraid box — no port forwarding, no firewall holes |
 | **Docker Compose** | Container orchestrator | One file describes all 5 services + how they talk |
 
 **What you DO NOT need to install manually:** MySQL, Redis, Node, Nginx — all of it runs inside Docker.
@@ -165,15 +165,15 @@ You should see: `client/  server/  docker-compose.yml  .env.example  SETUP.md  C
 
 1. Go to **https://console.cloud.google.com** → APIs & Services → Credentials.
 2. Create OAuth 2.0 Client ID (Web application).
-3. Add Authorized JavaScript origin: `https://taskr.elehmann.dev`
-4. Add Authorized redirect URI: `https://taskr.elehmann.dev`
+3. Add Authorized JavaScript origin: `https://taskr.example.com`
+4. Add Authorized redirect URI: `https://taskr.example.com`
 5. Copy the **Client ID** — you'll paste it into `.env` in a second.
 
 ### 4.3 Create a Cloudflare Tunnel
 
 1. Go to **https://one.dash.cloudflare.com** → Networks → Tunnels → Create tunnel.
 2. Give it a name (e.g. `taskr`). Copy the **tunnel token** it gives you.
-3. Add a Public Hostname: `taskr.elehmann.dev` → `http://client:80`.
+3. Add a Public Hostname: `taskr.example.com` → `http://client:80`.
    (That `client:80` is the name of the nginx container. Cloudflare will reach it through the Docker network.)
 
 ### 4.4 Create a Resend account
@@ -210,12 +210,12 @@ Fill in every field. Reference:
 | `JWT_SECRET` | output of `openssl rand -hex 32` |
 | `GOOGLE_CLIENT_ID` | from Google Console (ends in `.apps.googleusercontent.com`) |
 | `RESEND_API_KEY` | from Resend (starts with `re_`) |
-| `EMAIL_FROM` | `Taskr <noreply@elehmann.dev>` |
-| `CLIENT_URL` | `https://taskr.elehmann.dev` |
+| `EMAIL_FROM` | `Taskr <noreply@example.com>` |
+| `CLIENT_URL` | `https://taskr.example.com` |
 | `MYSQL_ROOT_PASSWORD` | output of `openssl rand -hex 16` |
 | `MYSQL_PASSWORD` | output of `openssl rand -hex 16` |
 | `DATABASE_URL` | `mysql://taskr:MYSQL_PASSWORD@localhost:3307/taskr` — replace `MYSQL_PASSWORD` with the actual value |
-| `VITE_API_URL` | `https://taskr.elehmann.dev` |
+| `VITE_API_URL` | `https://taskr.example.com` |
 | `VITE_GOOGLE_CLIENT_ID` | same as `GOOGLE_CLIENT_ID` |
 | `CLOUDFLARE_TUNNEL_TOKEN` | token from Cloudflare tunnel setup |
 | `DATA_PATH` | `/mnt/user/appdata/taskr` — uncomment this line |
@@ -277,8 +277,8 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 prisma.org.create({
   data: {
-    name: 'Viajesparati',
-    slug: 'viajesparati',
+    name: 'Your Org Name',
+    slug: 'your-org',
   }
 }).then(o => console.log('Created org:', o.id)).finally(() => prisma.\$disconnect());
 "
@@ -288,7 +288,7 @@ Copy the org ID it prints — you'll need it to associate your Google login with
 
 ### 4.9 Visit
 
-Open **https://taskr.elehmann.dev**. Sign in with Google. Done.
+Open **https://taskr.example.com**. Sign in with Google. Done.
 
 ---
 
@@ -447,7 +447,7 @@ The correct sequence on a fresh deploy:
 1. `docker compose up -d` — wait for MySQL healthcheck (~20s)
 2. `docker compose exec server npx prisma db push` — creates tables
 3. Seed org (SETUP.md §4.8)
-4. Sign in via Google at https://taskr.elehmann.dev — creates your User
+4. Sign in via Google at https://taskr.example.com — creates your User
 5. Attach your User to the org:
    ```bash
    docker compose exec server node -e "
@@ -468,7 +468,7 @@ The correct sequence on a fresh deploy:
 
 ## Part 10: Future Stuff (Don't Worry About It Yet)
 
-- **Hetzner VPS migration** — once the Unraid MVP is validated, we move to a real VPS on a Viajesparati subdomain.
+- **VPS migration** — once the self-hosted MVP is validated, move to a dedicated VPS on a production subdomain.
 - **Taskr MCP Server** — a Claude-facing wrapper around the REST API so you can manage boards from a chat interface. Design notes are in `CLAUDE.md` → "Future: Taskr MCP Server".
 
 ---

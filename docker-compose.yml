@@ -39,7 +39,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       RESEND_API_KEY: ${RESEND_API_KEY}
       EMAIL_FROM: ${EMAIL_FROM:-noreply@taskr.app}
-      CLIENT_URL: ${CLIENT_URL:-https://taskr.elehmann.dev}
+      CLIENT_URL: ${CLIENT_URL:-https://taskr.example.com}
       NODE_ENV: production
       PORT: 3001
     ports:
@@ -57,10 +57,10 @@ services:
     ports:
       - '${CLIENT_PORT:-3000}:80'
 
-  # Cloudflare Tunnel — exposes taskr.elehmann.dev without port forwarding
+  # Cloudflare Tunnel — exposes taskr.example.com without port forwarding
   # Create tunnel at https://one.dash.cloudflare.com → Networks → Tunnels
-  # Route: taskr.elehmann.dev → http://client:80
-  # Route: api.taskr.elehmann.dev → http://server:3001 (or use /api path routing)
+  # Route: taskr.example.com → http://client:80
+  # Route: api.taskr.example.com → http://server:3001 (or use /api path routing)
   tunnel:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
