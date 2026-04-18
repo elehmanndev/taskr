@@ -6,12 +6,13 @@ import { useBoardStore } from '../../stores/boardStore'
 interface ItemRowProps {
   item: Item
   columns: Column[]
-  groupColor: string
   nameWidth: number
   colWidth: number
 }
 
-export default function ItemRow({ item, columns, groupColor, nameWidth, colWidth }: ItemRowProps) {
+const ROW_HEIGHT = 36
+
+export default function ItemRow({ item, columns, nameWidth, colWidth }: ItemRowProps) {
   const { updateItem, deleteItem } = useBoardStore()
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(item.name)
@@ -35,13 +36,15 @@ export default function ItemRow({ item, columns, groupColor, nameWidth, colWidth
   }
 
   return (
-    <div className="flex border-b border-gray-200 bg-white hover:bg-gray-50 group">
-      {/* Name cell with colored group border */}
+    <div
+      className="flex border-b border-border last:border-b-0 bg-surface hover:bg-surface-hover group"
+      style={{ height: ROW_HEIGHT }}
+    >
+      {/* Name cell */}
       <div
-        className="shrink-0 flex items-center border-r border-gray-200 relative"
-        style={{ width: nameWidth }}
+        className="shrink-0 flex items-center border-r border-border pl-3"
+        style={{ width: nameWidth, height: ROW_HEIGHT }}
       >
-        <div className="w-1 h-full shrink-0" style={{ backgroundColor: groupColor }} />
         {editing ? (
           <input
             ref={inputRef}
@@ -52,26 +55,32 @@ export default function ItemRow({ item, columns, groupColor, nameWidth, colWidth
               if (e.key === 'Enter') commitName()
               if (e.key === 'Escape') { setName(item.name); setEditing(false) }
             }}
-            className="flex-1 h-full px-3 text-sm outline-none bg-white"
+            className="flex-1 h-full px-2 text-sm outline-none bg-surface text-text-primary"
           />
         ) : (
           <button
             onClick={() => setEditing(true)}
-            className="flex-1 h-full px-3 text-sm text-left truncate"
+            className="flex-1 h-full px-2 text-sm text-left truncate text-text-primary"
           >
-            {item.name || <span className="text-gray-300 italic">Untitled</span>}
+            {item.name || <span className="text-text-muted italic">Untitled</span>}
           </button>
         )}
+        <button
+          className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-full text-text-muted hover:text-accent hover:bg-surface"
+          title="Write an update"
+        >
+          <span className="text-base leading-none">💬</span>
+        </button>
         {item._count?.comments ? (
-          <span className="text-xs text-gray-400 px-2" title={`${item._count.comments} comments`}>
-            💬 {item._count.comments}
+          <span className="text-xs text-text-muted px-1" title={`${item._count.comments} comments`}>
+            {item._count.comments}
           </span>
         ) : null}
         <button
           onClick={() => {
             if (confirm('Delete this item?')) deleteItem(item.id).catch(() => {})
           }}
-          className="opacity-0 group-hover:opacity-100 px-2 text-gray-400 hover:text-red-500 text-sm"
+          className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center text-text-muted hover:text-danger"
           title="Delete item"
         >×</button>
       </div>
@@ -79,8 +88,8 @@ export default function ItemRow({ item, columns, groupColor, nameWidth, colWidth
       {columns.map((col) => (
         <div
           key={col.id}
-          className="shrink-0 h-9 border-r border-gray-200 flex items-center"
-          style={{ width: colWidth }}
+          className="shrink-0 border-r border-border flex items-stretch"
+          style={{ width: colWidth, height: ROW_HEIGHT }}
         >
           <ColumnCell column={col} item={item} onChange={changeColumnValue} />
         </div>

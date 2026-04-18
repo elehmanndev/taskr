@@ -4,7 +4,34 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Monday.com palette
+        // Semantic theme tokens — switch via <html data-theme="night|light|black">.
+        app: 'var(--app-bg)',
+        surface: {
+          DEFAULT: 'var(--surface)',
+          raised: 'var(--surface-raised)',
+          sunken: 'var(--surface-sunken)',
+          hover: 'var(--surface-hover)',
+        },
+        border: {
+          DEFAULT: 'var(--border)',
+          strong: 'var(--border-strong)',
+        },
+        text: {
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          muted: 'var(--text-muted)',
+          'on-accent': 'var(--text-on-accent)',
+        },
+        accent: {
+          DEFAULT: 'var(--accent)',
+          hover: 'var(--accent-hover)',
+          soft: 'var(--accent-soft)',
+        },
+        danger: 'var(--danger)',
+        success: 'var(--success)',
+        warning: 'var(--warning)',
+
+        // Monday.com status-label palette (unchanged).
         monday: {
           working_orange: '#FDAB3D',
           done_green: '#00C875',
@@ -39,6 +66,9 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+      },
+      boxShadow: {
+        card: 'var(--shadow-card)',
       },
     },
   },

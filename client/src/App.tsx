@@ -10,7 +10,7 @@ import { useAuthStore } from './stores/authStore'
 function Protected({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuthStore()
   const location = useLocation()
-  if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading…</div>
+  if (loading) return <div className="flex h-full items-center justify-center text-text-secondary">Loading…</div>
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />
   return children
 }

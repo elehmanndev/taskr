@@ -156,6 +156,67 @@ Socket.io with board-level rooms. Every mutation in routes calls `emitToBoard(bo
 
 Events: `item:created`, `item:updated`, `item:deleted`, `items:reordered`, `group:created`, `group:updated`, `group:deleted`, `board:updated`, `comment:created`, `notification:new`, `presence:update`, `presence:offline`
 
+## Design & UX Direction (agreed 2026-04-19)
+
+Scope was defined by reviewing Monday.com screenshots together. We are **not** copying everything Monday has — only the items below. Resist feature creep from future screenshots unless Eric explicitly asks.
+
+### Visual style
+
+- **Font:** Inter everywhere (loaded from Google Fonts or self-hosted; no Figtree/Roboto fallback dance).
+- **Themes:** three, all shipped up-front.
+  - **Night** (default) — dark navy background, matches Monday's "Night" theme. This is what Eric uses.
+  - **Light** — white background.
+  - **Black** — true-black OLED-friendly.
+- Theme switcher lives in the avatar dropdown (top-right).
+- Implementation: CSS variables on `:root[data-theme="night|light|black"]`, Tailwind reads them via `theme.extend.colors` referencing the vars. No `dark:` classes.
+- **Board visual priorities** (current BoardView is a generic table — this is the biggest gap):
+  - Column header band visually distinct from cell content (darker, stronger weight, clear border).
+  - Groups rendered as elevated **cards** with rounded corners + inner padding — not a flat stripe. Thick colored left bar + chevron + item count next to name.
+  - Status pills fill their cell fully (vertical + horizontal), bold uppercase white text.
+  - Tighter row height than current.
+  - Per-row hover icon: quick "write update" speech-bubble + plus.
+  - Column header click → sort cycle (asc → desc → off); right-click or menu → filter/hide.
+
+### Feature scope
+
+Order of attack: **(a) board visual overhaul first**, then the new sections below. New pages inherit the style system once it's set.
+
+**Board enhancements**
+1. Column header hierarchy + group-as-card polish.
+2. Column sort/filter from header.
+3. **Board width management**: pin first N columns (sticky-left), auto-collapse columns with no values on visible items, "focus mode" = user selects subset of columns to show (saved per view, extends the existing "Ocultar" toolbar button).
+4. Per-row quick update composer — posting notifies everyone involved with the item.
+5. Collapsible sidebar.
+
+**New pages / sections**
+6. **View tabs on a board**: table, calendar, custom filtered table (user picks a column + value, saved as named tab). No kanban, no timeline, no workload.
+7. **Mi trabajo** — cross-board aggregate of items I'm assigned to / mentioned in / subscribed to. Own Tabla + Calendario tabs, grouped by date bucket (Hoy / Esta semana / Próximo / Fechas pasadas / Sin fecha).
+8. **Feed de actualizaciones** — cross-board feed of comments/updates on items I'm involved with. Filter tabs: Todas / Me mencionaron / Marcado como favorito / Toda la cuenta.
+9. **Profile page** redesigned — card-based layout, left tab nav (Información personal / Situación laboral / Notificaciones / Idioma y región / Contraseña / Historial de sesión), right rail for contact fields. Adds `slackUserId` to User.
+10. **Workmates (People directory)** — grid of person cards with avatar, name, email (copyable), Slack deep-link button (`slack://user?team=…&id=…`).
+11. **Etiquetas (Tags) index** — org-level tag registry page, alphabetical sections, usage count per tag. Tags become first-class entities (migration required — see Data Model below).
+12. **Spotlight global search** — modal over the app, large search input, recent items, keyboard navigation (↑↓ + Enter). Mixed results: boards, workspaces, items, people.
+13. **Equipos (Teams)** — sub-org groupings distinct from department; user can be in many. Assignable like people; `@teamname` mentions expand to team members.
+14. **Horarios (Schedules)** — user work schedules (fixed weekly or rotating shift pattern) editable from profile. Page with department filter, daily view, monthly calendar view with pagination. Useful for shift-based teams; M–F teams just show the default.
+
+### Data model additions (plan — not yet migrated)
+
+- **User**: add `slackUserId: String?`.
+- **Tag** (new): `id, orgId, name, color, createdAt`. Migrate existing free-form tag strings from TAGS column values into this table + join.
+- **Team** (new): `id, orgId, name, color, createdAt`.
+- **TeamMember** (new): `teamId, userId, role?`.
+- **WorkSchedule** (new): `userId, pattern (JSON: weekly shifts or rotation), timezone`.
+- **ScheduleException** (new): `userId, date, type (vacation|sick|swap|other), shift?`.
+- **Comment**: add `likes` (user-list relation) and a per-user **bookmark/favorite** flag (separate pivot table).
+- **BoardView** (new): `id, boardId, name, type (TABLE|CALENDAR|FILTERED_TABLE), filters JSON, sortBy JSON, groupBy, hiddenColumns JSON, order`. Replaces the ad-hoc "views" we don't have yet.
+- **Favorites** (new pivot): `userId, entityType (BOARD|ITEM|COMMENT), entityId`.
+
+Do the migration in one pass before or alongside building the matching UI, not piecemeal.
+
+### What we are explicitly NOT doing
+
+Kanban view, timeline/Gantt view, workload view, Monday.labs-style apps marketplace, integrations marketplace, dashboards, widgets, docs feature, Monday CRM, form builder, mobile app, app grid / 9-dot switcher in the navbar, country-flag badge overlay on avatar.
+
 ## What's Done
 
 - [x] Full Prisma schema (all models, enums, relations)
@@ -194,70 +255,47 @@ Events: `item:created`, `item:updated`, `item:deleted`, `items:reordered`, `grou
 - [x] User profile routes (`/api/users`: list/search, get by id, PATCH /me)
 - [x] Folder CRUD routes (`/api/folders`)
 
-### Client (all — nothing built yet)
-- [ ] Vite + Tailwind + TypeScript config (vite.config.ts, tailwind.config.js, postcss.config.js, tsconfig.json)
-- [ ] API client (`/src/lib/api.ts` — fetch wrapper, all requests go to same origin since nginx proxies)
-- [ ] Socket.io client (`/src/lib/socket.ts` — connect, board room join/leave, event listeners)
-- [ ] Auth flow (Google Sign-In button → ID token → POST /auth/google → redirect to dashboard)
-- [ ] Zustand stores:
-  - `authStore` — user, org, login/logout
-  - `boardStore` — current board data, groups, items, columns; socket listeners for live updates
-  - `notificationStore` — notifications, unread count
-- [ ] Router (react-router-dom: /login, /dashboard, /board/:id, /settings)
-- [ ] Layout:
-  - Sidebar (org name, board list, create board button)
-  - Navbar (search, notification bell, user avatar/menu)
-- [ ] Board view (the main page):
-  - Column headers row (from board.columns, reorderable later)
-  - Group rows (collapsible, colored header, item count, add item button)
-  - Item rows (one cell per column, inline editable)
-  - Add group button
-- [ ] Drag and drop:
-  - Items between groups (@dnd-kit sortable)
-  - Group reorder (@dnd-kit sortable)
-- [ ] Column type components (each renders in an item row cell):
-  - StatusPill — colored pill, click opens dropdown with label options
-  - PeoplePicker — avatar(s), click opens user search dropdown
-  - DatePicker — date display, click opens calendar
-  - TimelinePicker — date range display, click opens dual calendar
-  - TextCell — inline text edit on click
-  - NumbersCell — inline number edit
-  - DropdownCell — select from predefined options
-  - TagsCell — multi-select tags with color
-  - URLCell — clickable link, edit on double-click
-  - CheckboxCell — toggle
-  - RatingCell — 1-5 stars
-  - ProgressCell — progress bar with percentage
-  - LongTextCell — opens modal/expandable for editing
-- [ ] Item detail panel (slide-in panel or modal):
-  - Item name (editable)
-  - All column values (rendered with appropriate column component)
-  - Comment thread (chronological, with reply support)
-  - Attachment list (URL/text links)
-  - Activity log (future)
-- [ ] Comment thread:
-  - Text input with @mention autocomplete (search org users)
-  - Reply to comment (nested)
-  - Edit/delete own comments
-- [ ] Notification bell + dropdown:
-  - Unread count badge
-  - Click opens notification list
-  - Mark as read (individual or all)
-  - Click notification → navigate to relevant item
-- [ ] Automation builder UI:
-  - List existing automations with on/off toggle
-  - Create new: trigger picker → condition builder → action picker
-  - Run history view
-- [ ] Board settings:
-  - Columns tab (add, remove, reorder, edit labels)
-  - Members tab (add, remove, change role)
-  - Automations tab (links to automation builder)
-- [ ] Org settings:
-  - Members (invite by email, remove, change role)
-  - Workspaces (create, manage)
-- [ ] Login page (centered Google Sign-In button, minimal)
-- [ ] Dashboard (grid of boards after login, create board card)
-- [ ] Responsive layout (works on tablet, usable on phone)
+### Client
+Scaffolding + core wiring is done and deployed. Biggest remaining gap is visual fidelity — current board view is a generic table, not recognizably Monday-like.
+
+- [x] Vite + Tailwind + TypeScript config
+- [x] API client (`/src/lib/api.ts`)
+- [x] Socket.io client (`/src/lib/socket.ts`)
+- [x] Auth flow (Google Sign-In → POST /auth/google → protected routes)
+- [x] Zustand stores: `authStore`, `boardStore`, `notificationStore`
+- [x] Router (/login, /dashboard, /board/:id, /profile, /users/:id)
+- [x] Layout: Sidebar, Navbar, AppLayout
+- [x] Board view skeleton: BoardView, ColumnHeader, GroupRow, ItemRow
+- [x] Login page
+- [x] Dashboard
+- [x] Column cells built: StatusPill, PeoplePicker, DateCell, TextCell, CheckboxCell, EmailCell, PhoneCell, FileCell, LinkCell (+ ColumnCell dispatcher)
+- [x] **Theme system** (2026-04-19): Night/Light/Black via CSS vars on `:root[data-theme]`, Tailwind semantic tokens (`surface`, `text-primary`, `border`, `accent`, etc. — see `index.css` + `tailwind.config.js`). Theme switcher lives in the avatar dropdown.
+- [x] **Board visual pass #1** (2026-04-19): column header band (uppercase, darker bg, distinct border), group-as-card (elevated rounded surface with full-height colored left bar + chevron + item count), tighter 36px rows, status pills fill cells (bold uppercase white), hover-revealed quick-update icon (UI only, no composer yet).
+- [x] **Column sort from header** (2026-04-19): click a column header to cycle asc → desc → off; sort lives in BoardView local state, not yet persisted.
+- [x] **Collapsible sidebar** (2026-04-19): toggle button in sidebar header, width persisted to localStorage.
+- [ ] **Visual pass #2 — needs in-browser review before continuing.** Build + deploy with `docker compose build --no-cache client && docker compose up -d client` on Unraid, then iterate on spacing/contrast/colors from the live app. Monday status-pill hex values were never captured (Chrome MCP scrape attempt was aborted) — grab them from devtools if anything looks off.
+- [ ] Quick-update composer: icon exists on item-row hover, click is currently a no-op. Wire to open a popover that posts a Comment and fires notifications to everyone involved with the item.
+- [ ] **Board width management**: pin first N columns (sticky-left with shadow), auto-collapse columns with no values on visible items, "focus mode" (user-selected subset). Extend the existing "Ocultar" concept.
+- [ ] **View tabs** below the board title: table / calendar / custom filtered-table. Requires the `BoardView` server model from the Design & UX Direction section (not yet migrated).
+- [ ] Remaining column cells: TimelinePicker, NumbersCell, DropdownCell, TagsCell, URLCell, RatingCell, ProgressCell, LongTextCell
+- [ ] Drag and drop with @dnd-kit (items between groups, group reorder) — dependency not yet installed
+- [ ] Item detail panel (slide-in/modal with column values, comments, attachments)
+- [ ] Comment thread UI (text input with @mention autocomplete, replies, edit/delete)
+- [ ] Notification bell + dropdown (store exists, no bell component yet)
+- [ ] Automation builder UI (trigger → condition → action; run history)
+- [ ] Board settings (columns, members, automations tabs)
+- [ ] Org settings (members invite/remove, workspaces)
+- [ ] Responsive layout polish (tablet/phone)
+
+New pages in scope (from Design & UX Direction — none started):
+- [ ] Mi trabajo (cross-board aggregate)
+- [ ] Feed de actualizaciones
+- [ ] Workmates (people directory with Slack deep-link — needs `slackUserId` on User)
+- [ ] Etiquetas index (needs Tag model migration first)
+- [ ] Spotlight global search modal
+- [ ] Profile page redesign (card-based with left tab nav)
+- [ ] Equipos (Teams — needs Team + TeamMember models)
+- [ ] Horarios (needs WorkSchedule + ScheduleException models)
 
 ## Environment Variables
 

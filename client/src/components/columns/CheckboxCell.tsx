@@ -12,7 +12,7 @@ export default function CheckboxCell({ value, onChange, readOnly }: CheckboxCell
         checked={!!value}
         disabled={readOnly}
         onChange={(e) => onChange(e.target.checked)}
-        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+        className="w-4 h-4 rounded border-border-strong text-accent focus:ring-accent cursor-pointer"
       />
     </div>
   )

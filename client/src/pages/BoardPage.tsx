@@ -42,15 +42,15 @@ export default function BoardPage() {
     }
   }, [boardId, upsertItem, removeItem, reorderItems, addGroup, updateGroup, removeGroup])
 
-  if (loading && !board) return <div className="p-8 text-gray-500">Loading board…</div>
-  if (error) return <div className="p-8 text-red-600">{error}</div>
+  if (loading && !board) return <div className="p-8 text-text-secondary">Loading board…</div>
+  if (error) return <div className="p-8 text-danger">{error}</div>
   if (!board) return null
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 pt-4 pb-2 border-b border-gray-200 bg-white shrink-0">
+      <div className="px-6 pt-4 pb-2 border-b border-border bg-surface shrink-0">
         <h1 className="text-xl font-bold">{board.name}</h1>
-        {board.description && <p className="text-sm text-gray-500 mt-0.5">{board.description}</p>}
+        {board.description && <p className="text-sm text-text-secondary mt-0.5">{board.description}</p>}
       </div>
       <div className="flex-1 min-h-0">
         <BoardView board={board} />

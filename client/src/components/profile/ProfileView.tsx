@@ -8,18 +8,18 @@ interface ProfileViewProps {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">{title}</div>
-      <div className="text-sm text-gray-800">{children}</div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-1.5">{title}</div>
+      <div className="text-sm text-text-primary">{children}</div>
     </div>
   )
 }
 
 function Chips({ items }: { items?: string[] }) {
-  if (!items || items.length === 0) return <span className="text-gray-400">—</span>
+  if (!items || items.length === 0) return <span className="text-text-muted">—</span>
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((s) => (
-        <span key={s} className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-medium">
+        <span key={s} className="bg-accent-soft text-accent px-2 py-0.5 rounded-full text-xs font-medium">
           {s}
         </span>
       ))}
@@ -34,13 +34,13 @@ export default function ProfileView({ user }: ProfileViewProps) {
         <Avatar name={user.name} src={user.avatarUrl} size="lg" />
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-semibold truncate">{user.name}</h2>
-          {user.title && <div className="text-sm text-gray-600">{user.title}</div>}
+          {user.title && <div className="text-sm text-text-secondary">{user.title}</div>}
           {user.department && (
-            <div className="text-xs text-gray-500 mt-0.5">{user.department}</div>
+            <div className="text-xs text-text-secondary mt-0.5">{user.department}</div>
           )}
-          <div className="text-xs text-gray-500 mt-1">
-            <a href={`mailto:${user.email}`} className="text-indigo-600 hover:underline">{user.email}</a>
-            {user.phone && <> · <a href={`tel:${user.phone}`} className="text-indigo-600 hover:underline">{user.phone}</a></>}
+          <div className="text-xs text-text-secondary mt-1">
+            <a href={`mailto:${user.email}`} className="text-accent hover:underline">{user.email}</a>
+            {user.phone && <> · <a href={`tel:${user.phone}`} className="text-accent hover:underline">{user.phone}</a></>}
           </div>
         </div>
       </div>
@@ -63,7 +63,7 @@ export default function ProfileView({ user }: ProfileViewProps) {
         <Section title="Where">
           <div className="flex items-center gap-3">
             {user.location && <span>📍 {user.location}</span>}
-            {user.timezone && <span className="text-gray-500">🕓 {user.timezone}</span>}
+            {user.timezone && <span className="text-text-secondary">🕓 {user.timezone}</span>}
           </div>
         </Section>
       )}
@@ -72,12 +72,12 @@ export default function ProfileView({ user }: ProfileViewProps) {
         <Section title="Links">
           <div className="flex gap-3">
             {user.linkedinUrl && (
-              <a href={user.linkedinUrl} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">
+              <a href={user.linkedinUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">
                 LinkedIn
               </a>
             )}
             {user.githubUrl && (
-              <a href={user.githubUrl} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">
+              <a href={user.githubUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">
                 GitHub
               </a>
             )}

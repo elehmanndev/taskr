@@ -8,8 +8,8 @@ interface PeoplePickerProps {
 export default function PeoplePicker({ assignees }: PeoplePickerProps) {
   if (!assignees || assignees.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-gray-300">
-        <div className="w-6 h-6 rounded-full border-2 border-dashed border-gray-300" />
+      <div className="w-full h-full flex items-center justify-center text-text-muted">
+        <div className="w-6 h-6 rounded-full border-2 border-dashed border-border-strong" />
       </div>
     )
   }
@@ -25,7 +25,7 @@ export default function PeoplePicker({ assignees }: PeoplePickerProps) {
         />
       ))}
       {assignees.length > 3 && (
-        <span className="text-xs text-gray-500 ml-1">+{assignees.length - 3}</span>
+        <span className="text-xs text-text-secondary ml-1">+{assignees.length - 3}</span>
       )}
     </div>
   )

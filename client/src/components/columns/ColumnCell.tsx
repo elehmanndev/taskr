@@ -75,8 +75,8 @@ export default function ColumnCell({ column, item, onChange }: ColumnCellProps) 
       const to = value?.to ?? ''
       const display = from || to ? `${from} → ${to}` : ''
       return (
-        <div className="w-full h-full text-xs text-gray-700 px-2 flex items-center truncate">
-          {display || <span className="text-gray-300">—</span>}
+        <div className="w-full h-full text-xs text-text-primary px-2 flex items-center truncate">
+          {display || <span className="text-text-muted">—</span>}
         </div>
       )
     }
@@ -89,7 +89,7 @@ export default function ColumnCell({ column, item, onChange }: ColumnCellProps) 
             <button
               key={n}
               onClick={() => onChange(column.id, n === rating ? 0 : n)}
-              className={n <= rating ? 'text-amber-400' : 'text-gray-300'}
+              className={n <= rating ? 'text-amber-400' : 'text-text-muted'}
             >★</button>
           ))}
         </div>
@@ -100,10 +100,10 @@ export default function ColumnCell({ column, item, onChange }: ColumnCellProps) 
       const pct = Math.max(0, Math.min(100, Number(value ?? 0)))
       return (
         <div className="w-full h-full flex items-center px-2 gap-2">
-          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div className="h-full bg-indigo-500" style={{ width: `${pct}%` }} />
+          <div className="flex-1 h-2 bg-surface-hover rounded-full overflow-hidden">
+            <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
           </div>
-          <span className="text-xs text-gray-500 w-8 text-right">{pct}%</span>
+          <span className="text-xs text-text-secondary w-8 text-right">{pct}%</span>
         </div>
       )
     }
@@ -111,28 +111,28 @@ export default function ColumnCell({ column, item, onChange }: ColumnCellProps) 
     case 'DROPDOWN':
     case 'TAGS':
       return (
-        <div className="w-full h-full text-xs text-gray-700 px-2 flex items-center truncate">
-          {Array.isArray(value) ? value.join(', ') : value || <span className="text-gray-300">—</span>}
+        <div className="w-full h-full text-xs text-text-primary px-2 flex items-center truncate">
+          {Array.isArray(value) ? value.join(', ') : value || <span className="text-text-muted">—</span>}
         </div>
       )
 
     case 'CREATION_LOG':
       return (
-        <div className="w-full h-full text-xs text-gray-500 px-2 flex items-center">
+        <div className="w-full h-full text-xs text-text-secondary px-2 flex items-center">
           {new Date(item.createdAt).toLocaleDateString()}
         </div>
       )
 
     case 'LAST_UPDATED':
       return (
-        <div className="w-full h-full text-xs text-gray-500 px-2 flex items-center">
+        <div className="w-full h-full text-xs text-text-secondary px-2 flex items-center">
           {new Date(item.updatedAt).toLocaleDateString()}
         </div>
       )
 
     default:
       return (
-        <div className="w-full h-full text-xs text-gray-400 px-2 flex items-center italic">
+        <div className="w-full h-full text-xs text-text-muted px-2 flex items-center italic">
           {value != null ? String(value) : '—'}
         </div>
       )

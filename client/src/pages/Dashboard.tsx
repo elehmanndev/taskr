@@ -44,7 +44,7 @@ export default function Dashboard() {
     return (
       <div className="p-8">
         <h1 className="text-xl font-semibold mb-2">No organization</h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-text-secondary">
           {user?.name}, you aren't a member of any organization yet. Ask an admin to invite you, or create one via the API.
         </p>
       </div>
@@ -56,7 +56,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Boards</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-text-secondary mt-1">
             {loading ? 'Loading…' : `${boards.length} board${boards.length === 1 ? '' : 's'}`}
           </p>
         </div>
@@ -68,11 +68,11 @@ export default function Dashboard() {
           <Link
             key={b.id}
             to={`/board/${b.id}`}
-            className="block bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-indigo-300 transition"
+            className="block bg-surface rounded-lg border border-border p-4 hover:shadow-md hover:border-accent transition"
           >
             <div className="h-16 -mx-4 -mt-4 mb-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-t-lg" />
             <h3 className="font-semibold truncate">{b.name}</h3>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-text-secondary mt-1">
               {b._count?.items ?? 0} items · {b.kind.toLowerCase()}
             </p>
           </Link>
@@ -80,7 +80,7 @@ export default function Dashboard() {
 
         <button
           onClick={() => setModalOpen(true)}
-          className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-4 hover:border-indigo-400 hover:bg-indigo-50 text-gray-500 hover:text-indigo-600 transition flex flex-col items-center justify-center min-h-[120px]"
+          className="bg-surface rounded-lg border-2 border-dashed border-border-strong p-4 hover:border-accent hover:bg-accent-soft text-text-secondary hover:text-accent transition flex flex-col items-center justify-center min-h-[120px]"
         >
           <div className="text-3xl leading-none">+</div>
           <div className="text-sm mt-1">Create Board</div>
@@ -95,7 +95,7 @@ export default function Dashboard() {
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') createBoard() }}
             placeholder="Board name"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+            className="w-full border border-border-strong rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-accent outline-none"
           />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button>

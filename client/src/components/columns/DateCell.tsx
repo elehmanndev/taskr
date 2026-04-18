@@ -42,7 +42,7 @@ export default function DateCell({ value, onChange, readOnly }: DateCellProps) {
           if (e.key === 'Enter') commit()
           if (e.key === 'Escape') { setLocal(value ?? ''); setEditing(false) }
         }}
-        className="w-full h-full px-2 text-xs bg-white outline-none"
+        className="w-full h-full px-2 text-xs bg-surface outline-none"
       />
     )
   }
@@ -51,9 +51,9 @@ export default function DateCell({ value, onChange, readOnly }: DateCellProps) {
     <button
       disabled={readOnly}
       onClick={() => setEditing(true)}
-      className="w-full h-full text-xs text-gray-700 px-2 text-center hover:bg-gray-50"
+      className="w-full h-full text-xs text-text-primary px-2 text-center hover:bg-surface-hover"
     >
-      {formatDisplay(value) || <span className="text-gray-300">—</span>}
+      {formatDisplay(value) || <span className="text-text-muted">—</span>}
     </button>
   )
 }

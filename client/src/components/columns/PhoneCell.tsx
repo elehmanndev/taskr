@@ -31,7 +31,7 @@ export default function PhoneCell({ value, onChange, readOnly }: PhoneCellProps)
           if (e.key === 'Enter') commit()
           if (e.key === 'Escape') { setLocal(value ?? ''); setEditing(false) }
         }}
-        className="w-full h-full px-2 text-xs bg-white outline-none"
+        className="w-full h-full px-2 text-xs bg-surface outline-none"
       />
     )
   }
@@ -40,7 +40,7 @@ export default function PhoneCell({ value, onChange, readOnly }: PhoneCellProps)
     return (
       <a
         href={`tel:${value.replace(/\s+/g, '')}`}
-        className="w-full h-full flex items-center px-2 text-xs text-indigo-600 hover:underline truncate"
+        className="w-full h-full flex items-center px-2 text-xs text-accent hover:underline truncate"
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={(e) => { e.preventDefault(); setEditing(true) }}
       >
@@ -53,7 +53,7 @@ export default function PhoneCell({ value, onChange, readOnly }: PhoneCellProps)
     <button
       disabled={readOnly}
       onClick={() => setEditing(true)}
-      className="w-full h-full text-xs text-gray-300 px-2 text-left hover:bg-gray-50"
+      className="w-full h-full text-xs text-text-muted px-2 text-left hover:bg-surface-hover"
     >—</button>
   )
 }

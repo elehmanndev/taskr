@@ -25,13 +25,13 @@ export default function Profile() {
       .finally(() => setLoading(false))
   }, [targetId])
 
-  if (loading) return <div className="p-8 text-gray-500">Loading…</div>
-  if (error) return <div className="p-8 text-red-600">{error}</div>
+  if (loading) return <div className="p-8 text-text-secondary">Loading…</div>
+  if (error) return <div className="p-8 text-danger">{error}</div>
   if (!user) return null
 
   return (
     <div className="p-8 max-w-2xl mx-auto">
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-surface rounded-lg border border-border p-6">
         {isMe ? (
           <>
             <h1 className="text-xl font-bold mb-4">Your Profile</h1>

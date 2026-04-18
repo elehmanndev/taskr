@@ -65,14 +65,14 @@ function Field({
 }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
     <label className="block">
-      <span className="text-xs font-medium text-gray-700">{label}</span>
+      <span className="text-xs font-medium text-text-primary">{label}</span>
       <div className="mt-1">{children}</div>
-      {hint && <span className="text-[11px] text-gray-400 mt-0.5 block">{hint}</span>}
+      {hint && <span className="text-[11px] text-text-muted mt-0.5 block">{hint}</span>}
     </label>
   )
 }
 
-const inputClass = 'w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none'
+const inputClass = 'w-full border border-border-strong rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-accent focus:border-accent outline-none'
 
 export default function ProfileForm({ user, onSaved }: ProfileFormProps) {
   const [form, setForm] = useState<FormState>(toForm(user))
@@ -156,7 +156,7 @@ export default function ProfileForm({ user, onSaved }: ProfileFormProps) {
         </Field>
       </div>
 
-      {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</div>}
+      {error && <div className="text-sm text-danger bg-surface border border-danger rounded-md px-3 py-2">{error}</div>}
 
       <div className="flex items-center justify-end gap-2">
         {saved && <span className="text-xs text-emerald-600">Saved ✓</span>}

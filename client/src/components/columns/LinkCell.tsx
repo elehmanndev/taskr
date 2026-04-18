@@ -47,7 +47,7 @@ export default function LinkCell({ value, onChange, readOnly }: LinkCellProps) {
 
   if (editing) {
     return (
-      <div className="w-full h-full flex gap-1 px-1 bg-white">
+      <div className="w-full h-full flex gap-1 px-1 bg-surface">
         <input
           ref={urlRef}
           value={url}
@@ -63,7 +63,7 @@ export default function LinkCell({ value, onChange, readOnly }: LinkCellProps) {
           onBlur={commit}
           onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
           placeholder="label"
-          className="w-20 text-xs outline-none border-l border-gray-200 pl-1"
+          className="w-20 text-xs outline-none border-l border-border pl-1"
         />
       </div>
     )
@@ -75,7 +75,7 @@ export default function LinkCell({ value, onChange, readOnly }: LinkCellProps) {
         href={v.url}
         target="_blank"
         rel="noreferrer"
-        className="w-full h-full flex items-center px-2 text-xs text-indigo-600 hover:underline truncate"
+        className="w-full h-full flex items-center px-2 text-xs text-accent hover:underline truncate"
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={(e) => { e.preventDefault(); setEditing(true) }}
       >
@@ -88,7 +88,7 @@ export default function LinkCell({ value, onChange, readOnly }: LinkCellProps) {
     <button
       disabled={readOnly}
       onClick={() => setEditing(true)}
-      className="w-full h-full text-xs text-gray-300 px-2 text-left hover:bg-gray-50"
+      className="w-full h-full text-xs text-text-muted px-2 text-left hover:bg-surface-hover"
     >—</button>
   )
 }

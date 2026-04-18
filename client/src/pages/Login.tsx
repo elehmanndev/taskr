@@ -60,18 +60,18 @@ export default function Login() {
 
   return (
     <div className="min-h-full flex items-center justify-center p-4 bg-gradient-to-br from-indigo-50 to-white">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-lg p-8 text-center">
-        <div className="w-12 h-12 mx-auto bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl mb-4">T</div>
+      <div className="w-full max-w-sm bg-surface rounded-xl shadow-lg p-8 text-center">
+        <div className="w-12 h-12 mx-auto bg-accent rounded-lg flex items-center justify-center text-white font-bold text-xl mb-4">T</div>
         <h1 className="text-2xl font-bold mb-1">Welcome to Taskr</h1>
-        <p className="text-sm text-gray-500 mb-6">Sign in to continue</p>
+        <p className="text-sm text-text-secondary mb-6">Sign in to continue</p>
 
-        {loading && <div className="text-sm text-gray-500">Loading…</div>}
+        {loading && <div className="text-sm text-text-secondary">Loading…</div>}
         <div className={loading ? 'hidden' : 'flex justify-center'}>
           <div ref={btnRef} />
         </div>
 
         {error && (
-          <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+          <div className="mt-4 text-sm text-danger bg-surface border border-danger rounded-md px-3 py-2">
             {error}
           </div>
         )}

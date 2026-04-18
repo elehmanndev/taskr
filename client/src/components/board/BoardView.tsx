@@ -1,22 +1,64 @@
-import { useState } from 'react'
-import type { Board } from '../../lib/types'
-import ColumnHeader from './ColumnHeader'
+import { useMemo, useState } from 'react'
+import type { Board, Column, Group, Item } from '../../lib/types'
+import ColumnHeader, { type SortState } from './ColumnHeader'
 import GroupRow from './GroupRow'
 import { useBoardStore } from '../../stores/boardStore'
 
-const NAME_COL_WIDTH = 320
-const COL_WIDTH = 140
+const NAME_COL_WIDTH = 360
+const COL_WIDTH = 150
 
 interface BoardViewProps {
   board: Board
+}
+
+function cellSortKey(item: Item, column: Column): string | number {
+  const v = item.columnValues?.[column.id]
+  if (v == null) return ''
+  if (typeof v === 'number') return v
+  if (typeof v === 'string') return v.toLowerCase()
+  if (typeof v === 'object') {
+    if ('from' in v && v.from) return v.from as string
+    if ('id' in v && typeof v.id === 'number') return v.id
+    if ('label' in v) return String(v.label).toLowerCase()
+    if ('url' in v) return String(v.url).toLowerCase()
+  }
+  return JSON.stringify(v).toLowerCase()
+}
+
+function sortedItems(items: Item[], columns: Column[], sort: SortState | null): Item[] {
+  if (!sort) return items
+  const col = columns.find((c) => c.id === sort.columnId)
+  if (!col) return items
+  const sorted = [...items].sort((a, b) => {
+    const va = cellSortKey(a, col)
+    const vb = cellSortKey(b, col)
+    if (va < vb) return sort.dir === 'asc' ? -1 : 1
+    if (va > vb) return sort.dir === 'asc' ? 1 : -1
+    return 0
+  })
+  return sorted
 }
 
 export default function BoardView({ board }: BoardViewProps) {
   const { createGroup } = useBoardStore()
   const [adding, setAdding] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
+  const [sort, setSort] = useState<SortState | null>(null)
 
   const totalWidth = NAME_COL_WIDTH + board.columns.length * COL_WIDTH
+
+  const groupsSorted: Group[] = useMemo(() => {
+    if (!sort) return board.groups
+    return board.groups.map((g) => ({ ...g, items: sortedItems(g.items, board.columns, sort) }))
+  }, [board.groups, board.columns, sort])
+
+  const toggleSort = (columnId: string) => {
+    setSort((prev) => {
+      if (!prev || prev.columnId !== columnId) return { columnId, dir: 'asc' }
+      if (prev.dir === 'asc') return { columnId, dir: 'desc' }
+      return null
+    })
+  }
 
   const addGroup = async () => {
     if (!newGroupName.trim()) return
@@ -30,24 +72,30 @@ export default function BoardView({ board }: BoardViewProps) {
   }
 
   return (
-    <div className="p-4 overflow-auto h-full scrollbar-thin">
+    <div className="p-6 overflow-auto h-full scrollbar-thin bg-app">
       <div style={{ minWidth: totalWidth }}>
         {/* Column headers row */}
-        <div className="flex sticky top-0 z-20 bg-gray-50 border-b border-gray-200">
+        <div className="flex sticky top-0 z-20 bg-surface-sunken border-b border-border rounded-t-md overflow-hidden">
           <div
-            className="shrink-0 h-9 border-r border-gray-200 bg-gray-50 flex items-center px-3 text-xs font-semibold text-gray-600 uppercase tracking-wide"
+            className="shrink-0 h-10 border-r border-border bg-surface-sunken flex items-center px-4 text-[11px] font-semibold text-text-secondary uppercase tracking-wider"
             style={{ width: NAME_COL_WIDTH }}
           >
             Item
           </div>
           {board.columns.map((col) => (
-            <ColumnHeader key={col.id} column={col} width={COL_WIDTH} />
+            <ColumnHeader
+              key={col.id}
+              column={col}
+              width={COL_WIDTH}
+              sort={sort}
+              onToggleSort={toggleSort}
+            />
           ))}
         </div>
 
         {/* Groups */}
-        <div className="pt-4">
-          {board.groups.map((group) => (
+        <div className="pt-4 space-y-6">
+          {groupsSorted.map((group) => (
             <GroupRow
               key={group.id}
               group={group}
@@ -60,16 +108,14 @@ export default function BoardView({ board }: BoardViewProps) {
 
           {/* Add group */}
           <div className="mt-2">
-            <div className="flex items-center gap-2">
-              <input
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') addGroup() }}
-                placeholder="+ Add group"
-                disabled={adding}
-                className="text-sm px-3 py-1.5 border border-dashed border-gray-300 rounded-md bg-transparent outline-none focus:border-indigo-500 focus:bg-white"
-              />
-            </div>
+            <input
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') addGroup() }}
+              placeholder="+ Add group"
+              disabled={adding}
+              className="text-sm px-3 py-2 border border-dashed border-border rounded-md bg-transparent text-text-secondary placeholder:text-text-muted outline-none focus:border-accent focus:bg-surface focus:text-text-primary"
+            />
           </div>
         </div>
       </div>

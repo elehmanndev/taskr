@@ -42,76 +42,85 @@ export default function GroupRow({ group, columns, nameWidth, colWidth, totalWid
     }
   }
 
+  const color = group.color || '#579bfc'
+
   return (
-    <div className="mb-6">
+    <div style={{ minWidth: totalWidth }}>
       {/* Group header bar */}
-      <div
-        className="flex items-center gap-2 h-9 sticky top-9 z-10 pl-1"
-        style={{ minWidth: totalWidth }}
-      >
-        <div className="flex items-center gap-2" style={{ color: group.color }}>
+      <div className="flex items-center gap-2 h-9 pl-1 mb-1">
+        <button
+          onClick={toggleCollapse}
+          className="w-6 h-6 flex items-center justify-center rounded hover:bg-surface-hover"
+          title={group.collapsed ? 'Expand' : 'Collapse'}
+          style={{ color }}
+        >
+          <span className={`inline-block transition-transform ${group.collapsed ? '' : 'rotate-90'}`}>▶</span>
+        </button>
+        {editingName ? (
+          <input
+            autoFocus
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitName()
+              if (e.key === 'Escape') { setNameDraft(group.name); setEditingName(false) }
+            }}
+            className="font-semibold text-base bg-surface border border-border rounded px-2 py-0.5 outline-none"
+            style={{ color }}
+          />
+        ) : (
           <button
-            onClick={toggleCollapse}
-            className="w-5 h-5 flex items-center justify-center hover:bg-gray-100 rounded"
-            title={group.collapsed ? 'Expand' : 'Collapse'}
+            onClick={() => setEditingName(true)}
+            className="font-semibold text-base"
+            style={{ color }}
           >
-            <span className={`inline-block transition-transform ${group.collapsed ? '' : 'rotate-90'}`}>▶</span>
+            {group.name}
           </button>
-          {editingName ? (
-            <input
-              autoFocus
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              onBlur={commitName}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitName()
-                if (e.key === 'Escape') { setNameDraft(group.name); setEditingName(false) }
-              }}
-              className="font-semibold text-sm bg-white border border-gray-300 rounded px-1 outline-none"
-              style={{ color: group.color }}
-            />
-          ) : (
-            <button onClick={() => setEditingName(true)} className="font-semibold text-sm">
-              {group.name}
-            </button>
-          )}
-          <span className="text-xs text-gray-500 font-normal">{group.items.length} item{group.items.length === 1 ? '' : 's'}</span>
-        </div>
+        )}
+        <span className="text-xs text-text-muted font-normal">
+          {group.items.length} item{group.items.length === 1 ? '' : 's'}
+        </span>
       </div>
 
       {!group.collapsed && (
-        <>
-          <div className="rounded-md overflow-hidden border border-gray-200 bg-white" style={{ minWidth: totalWidth }}>
-            {group.items.map((item) => (
-              <ItemRow
-                key={item.id}
-                item={item}
-                columns={columns}
-                groupColor={group.color}
-                nameWidth={nameWidth}
-                colWidth={colWidth}
-              />
-            ))}
+        <div
+          className="relative rounded-lg overflow-hidden border border-border bg-surface shadow-card"
+          style={{ minWidth: totalWidth }}
+        >
+          {/* Colored left bar runs full group height */}
+          <div
+            className="absolute left-0 top-0 bottom-0 w-1"
+            style={{ backgroundColor: color }}
+          />
 
-            {/* Add item row */}
-            <div className="flex border-t border-gray-200" style={{ minWidth: totalWidth }}>
-              <div className="shrink-0 flex items-center" style={{ width: nameWidth }}>
-                <div className="w-1 h-9 shrink-0" style={{ backgroundColor: group.color }} />
-                <input
-                  value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') addItem() }}
-                  placeholder="+ Add item"
-                  disabled={creating}
-                  className="flex-1 h-9 px-3 text-sm outline-none placeholder-gray-400 bg-transparent"
-                />
-              </div>
-              {columns.map((col) => (
-                <div key={col.id} className="shrink-0 h-9 border-l border-gray-200" style={{ width: colWidth }} />
-              ))}
+          {group.items.map((item) => (
+            <ItemRow
+              key={item.id}
+              item={item}
+              columns={columns}
+              nameWidth={nameWidth}
+              colWidth={colWidth}
+            />
+          ))}
+
+          {/* Add item row */}
+          <div className="flex border-t border-border hover:bg-surface-hover/40" style={{ minWidth: totalWidth }}>
+            <div className="shrink-0 flex items-center pl-3" style={{ width: nameWidth }}>
+              <input
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') addItem() }}
+                placeholder="+ Add item"
+                disabled={creating}
+                className="flex-1 h-8 px-2 text-sm outline-none bg-transparent text-text-primary placeholder:text-text-muted"
+              />
             </div>
+            {columns.map((col) => (
+              <div key={col.id} className="shrink-0 h-8 border-l border-border" style={{ width: colWidth }} />
+            ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   )

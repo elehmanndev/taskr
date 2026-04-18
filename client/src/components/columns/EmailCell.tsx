@@ -31,7 +31,7 @@ export default function EmailCell({ value, onChange, readOnly }: EmailCellProps)
           if (e.key === 'Enter') commit()
           if (e.key === 'Escape') { setLocal(value ?? ''); setEditing(false) }
         }}
-        className="w-full h-full px-2 text-xs bg-white outline-none"
+        className="w-full h-full px-2 text-xs bg-surface outline-none"
       />
     )
   }
@@ -41,7 +41,7 @@ export default function EmailCell({ value, onChange, readOnly }: EmailCellProps)
       <div className="w-full h-full flex items-center px-2 gap-1">
         <a
           href={`mailto:${value}`}
-          className="flex-1 truncate text-xs text-indigo-600 hover:underline"
+          className="flex-1 truncate text-xs text-accent hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
           {value}
@@ -49,7 +49,7 @@ export default function EmailCell({ value, onChange, readOnly }: EmailCellProps)
         {!readOnly && (
           <button
             onClick={() => setEditing(true)}
-            className="text-gray-400 hover:text-gray-600 text-xs opacity-0 hover:opacity-100 group-hover:opacity-100"
+            className="text-text-muted hover:text-text-secondary text-xs opacity-0 hover:opacity-100 group-hover:opacity-100"
             title="Edit"
           >✎</button>
         )}
@@ -61,7 +61,7 @@ export default function EmailCell({ value, onChange, readOnly }: EmailCellProps)
     <button
       disabled={readOnly}
       onClick={() => setEditing(true)}
-      className="w-full h-full text-xs text-gray-300 px-2 text-left hover:bg-gray-50"
+      className="w-full h-full text-xs text-text-muted px-2 text-left hover:bg-surface-hover"
     >—</button>
   )
 }

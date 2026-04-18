@@ -49,33 +49,33 @@ export default function ProfilePopover({ userId, name, avatarUrl, size = 'sm' }:
       </button>
 
       {open && (
-        <div className="absolute z-30 top-full left-0 mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-xl p-4">
-          {loading && <div className="text-xs text-gray-500">Loading…</div>}
+        <div className="absolute z-30 top-full left-0 mt-1 w-72 bg-surface border border-border rounded-lg shadow-xl p-4">
+          {loading && <div className="text-xs text-text-secondary">Loading…</div>}
           {!loading && user && (
             <>
               <div className="flex items-start gap-3">
                 <Avatar name={user.name} src={user.avatarUrl} size="md" />
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold truncate">{user.name}</div>
-                  {user.title && <div className="text-xs text-gray-600 truncate">{user.title}</div>}
+                  {user.title && <div className="text-xs text-text-secondary truncate">{user.title}</div>}
                   {user.department && (
-                    <div className="text-[11px] text-gray-500 truncate">{user.department}</div>
+                    <div className="text-[11px] text-text-secondary truncate">{user.department}</div>
                   )}
                 </div>
               </div>
 
               {user.bio && (
-                <p className="mt-3 text-xs text-gray-700 line-clamp-4 whitespace-pre-wrap">
+                <p className="mt-3 text-xs text-text-primary line-clamp-4 whitespace-pre-wrap">
                   {user.bio}
                 </p>
               )}
 
               {(user.skills?.length ?? 0) > 0 && (
                 <div className="mt-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1">Skills</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Skills</div>
                   <div className="flex flex-wrap gap-1">
                     {user.skills!.slice(0, 8).map((s) => (
-                      <span key={s} className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[11px]">{s}</span>
+                      <span key={s} className="bg-accent-soft text-accent px-1.5 py-0.5 rounded text-[11px]">{s}</span>
                     ))}
                   </div>
                 </div>
@@ -83,7 +83,7 @@ export default function ProfilePopover({ userId, name, avatarUrl, size = 'sm' }:
 
               {(user.expertise?.length ?? 0) > 0 && (
                 <div className="mt-2">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1">Knows</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Knows</div>
                   <div className="flex flex-wrap gap-1">
                     {user.expertise!.slice(0, 8).map((s) => (
                       <span key={s} className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded text-[11px]">{s}</span>
@@ -92,12 +92,12 @@ export default function ProfilePopover({ userId, name, avatarUrl, size = 'sm' }:
                 </div>
               )}
 
-              <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-                <a href={`mailto:${user.email}`} className="text-indigo-600 hover:underline truncate">{user.email}</a>
+              <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-xs">
+                <a href={`mailto:${user.email}`} className="text-accent hover:underline truncate">{user.email}</a>
                 <Link
                   to={`/users/${user.id}`}
                   onClick={() => setOpen(false)}
-                  className="text-gray-500 hover:text-gray-700 shrink-0 ml-2"
+                  className="text-text-secondary hover:text-text-primary shrink-0 ml-2"
                 >
                   View profile →
                 </Link>

@@ -45,7 +45,7 @@ export default function TextCell({
           if (e.key === 'Enter') commit()
           if (e.key === 'Escape') { setLocal(value ?? ''); setEditing(false) }
         }}
-        className={`w-full h-full px-2 text-xs bg-white outline-none ${alignClass}`}
+        className={`w-full h-full px-2 text-xs bg-surface outline-none ${alignClass}`}
       />
     )
   }
@@ -54,9 +54,9 @@ export default function TextCell({
     <button
       disabled={readOnly}
       onClick={() => setEditing(true)}
-      className={`w-full h-full text-xs text-gray-700 px-2 hover:bg-gray-50 truncate ${alignClass}`}
+      className={`w-full h-full text-xs text-text-primary px-2 hover:bg-surface-hover truncate ${alignClass}`}
     >
-      {value || <span className="text-gray-300">{placeholder || '—'}</span>}
+      {value || <span className="text-text-muted">{placeholder || '—'}</span>}
     </button>
   )
 }

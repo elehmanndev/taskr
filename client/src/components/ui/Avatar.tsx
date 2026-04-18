@@ -22,7 +22,7 @@ function colorFor(name?: string) {
   let h = 0
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
   const palette = [
-    'bg-indigo-500', 'bg-rose-500', 'bg-emerald-500',
+    'bg-accent', 'bg-rose-500', 'bg-emerald-500',
     'bg-amber-500', 'bg-sky-500', 'bg-purple-500',
     'bg-pink-500', 'bg-teal-500',
   ]
