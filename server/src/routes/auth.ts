@@ -16,7 +16,7 @@ export async function authRoutes(app: FastifyInstance) {
     })
 
     const payload = ticket.getPayload()
-    if (!payload?.email) return reply.code(400).send({ error: 'Invalid token' })
+    if (!payload?.email || !payload.email_verified) return reply.code(400).send({ error: 'Invalid token' })
 
     // Match by email first so pre-seeded users (no googleId yet) link cleanly on first login.
     const existing = await prisma.user.findUnique({ where: { email: payload.email } })
