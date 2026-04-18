@@ -66,7 +66,7 @@ services:
   # Route: taskr.example.com → http://client:80
   # Route: api.taskr.example.com → http://server:3001 (or use /api path routing)
   tunnel:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2026.3.0
     container_name: taskr-tunnel
     restart: unless-stopped
     command: tunnel run
