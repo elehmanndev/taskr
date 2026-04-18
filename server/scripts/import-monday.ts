@@ -67,6 +67,14 @@ const SOURCE_TO_MONDAY_GROUP: Record<string, string> = {
   'items-compensa.json':   'grupo_nuevo92850',               // same bucket
   'items-guardia.json':    'grupo_nuevo56127',               // Guardias finde
   'items-bajas.json':      'grupo_nuevo__1',                 // Bajas
+  'items-newsletter.json': 'grupo_nuevo75562',               // Newsletter
+  'items-sms.json':        'grupo_nuevo62885',               // SMS
+  'items-push.json':       'grupo_nuevo25234',               // Push
+  'items-blog.json':       'grupo_nuevo3251',                // Blog
+  'items-reuniones.json':  'grupo_nuevo23254',               // Reuniones
+  'items-web.json':        'grupo_nuevo77425',               // Web
+  'items-branding.json':   'grupo_nuevo',                    // Branding
+  'items-paid.json':       'grupo_nuevo19497',               // Paid
 };
 
 async function main() {
