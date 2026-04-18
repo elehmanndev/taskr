@@ -1,0 +1,419 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ORGS & USERS ────────────────────────────────────────────────────────────
+
+model Org {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members    OrgMember[]
+  workspaces Workspace[]
+  boards     Board[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatarUrl String?
+  googleId  String?  @unique
+
+  // Profile
+  title      String?             // Job title, e.g. "Senior Software Engineer"
+  department String?             // e.g. "Marketing", "Engineering"
+  bio        String?  @db.Text   // Free-form description
+  skills     Json     @default("[]")  // ["React", "PostgreSQL", "Figma"]
+  expertise  Json     @default("[]")  // ["OAuth", "Payments", "Mobile UX"]
+  phone      String?
+  timezone   String?             // IANA, e.g. "Europe/Madrid"
+  location   String?             // "Barcelona, Spain"
+  linkedinUrl String?
+  githubUrl   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orgs           OrgMember[]
+  assignedItems  ItemAssignee[]
+  createdItems   Item[]         @relation("ItemCreator")
+  comments       Comment[]
+  notifications  Notification[]
+  automationsCreated Automation[]
+}
+
+model OrgMember {
+  id        String    @id @default(cuid())
+  orgId     String
+  userId    String
+  role      OrgRole   @default(MEMBER)
+  joinedAt  DateTime  @default(now())
+
+  org  Org  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+  @@index([orgId])
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+// ─── WORKSPACES & BOARDS ─────────────────────────────────────────────────────
+
+model Workspace {
+  id          String   @id @default(cuid())
+  orgId       String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  org     Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  boards  Board[]
+  folders Folder[]
+
+  @@index([orgId])
+}
+
+model Folder {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  color       String   @default("#8B9BAE")
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  boards    Board[]
+
+  @@index([workspaceId])
+}
+
+model Board {
+  id          String      @id @default(cuid())
+  orgId       String
+  workspaceId String?
+  folderId    String?
+  name        String
+  description String?
+  kind        BoardKind   @default(PUBLIC)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  org         Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  workspace   Workspace?  @relation(fields: [workspaceId], references: [id])
+  folder      Folder?     @relation(fields: [folderId], references: [id])
+  columns     Column[]
+  groups      Group[]
+  items       Item[]
+  members     BoardMember[]
+  automations Automation[]
+  webhooks    Webhook[]
+
+  @@index([orgId])
+  @@index([workspaceId])
+  @@index([folderId])
+}
+
+enum BoardKind {
+  PUBLIC
+  PRIVATE
+  SHAREABLE
+}
+
+model BoardMember {
+  id      String      @id @default(cuid())
+  boardId String
+  userId  String
+  role    BoardRole   @default(EDITOR)
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, userId])
+  @@index([boardId])
+}
+
+enum BoardRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+// ─── COLUMNS ─────────────────────────────────────────────────────────────────
+
+model Column {
+  id          String     @id @default(cuid())
+  boardId     String
+  title       String
+  type        ColumnType
+  settings    Json       @default("{}")  // labels for status, options for dropdown, etc.
+  position    Int        @default(0)
+  width       Int        @default(200)
+  isRequired  Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId])
+}
+
+enum ColumnType {
+  NAME
+  STATUS
+  PEOPLE
+  DATE
+  TIMELINE
+  TEXT
+  NUMBERS
+  DROPDOWN
+  TAGS
+  URL
+  LONG_TEXT
+  CHECKBOX
+  RATING
+  PROGRESS
+  TIME_TRACKING
+  CREATION_LOG
+  LAST_UPDATED
+  EMAIL
+  PHONE
+  LINK
+  FILE
+}
+
+// ─── GROUPS ──────────────────────────────────────────────────────────────────
+
+model Group {
+  id        String   @id @default(cuid())
+  boardId   String
+  name      String
+  color     String   @default("#0073EA")
+  position  Int      @default(0)
+  collapsed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  items Item[]
+
+  @@index([boardId])
+}
+
+// ─── ITEMS ───────────────────────────────────────────────────────────────────
+
+model Item {
+  id           String    @id @default(cuid())
+  boardId      String
+  groupId      String
+  name         String
+  columnValues Json      @default("{}")   // { columnId: value }
+  position     Int       @default(0)
+  createdById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  board       Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  group       Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy   User?          @relation("ItemCreator", fields: [createdById], references: [id])
+  assignees   ItemAssignee[]
+  comments    Comment[]
+  attachments Attachment[]
+  automationRuns AutomationRun[]
+
+  @@index([boardId])
+  @@index([groupId])
+  @@index([createdById])
+}
+
+model ItemAssignee {
+  id     String @id @default(cuid())
+  itemId String
+  userId String
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, userId])
+  @@index([itemId])
+}
+
+// ─── COMMENTS ────────────────────────────────────────────────────────────────
+
+model Comment {
+  id             String    @id @default(cuid())
+  itemId         String
+  userId         String
+  body           String    @db.Text
+  mentions       Json      @default("[]")   // [{ userId, name }]
+  parentId       String?
+  editedAt       DateTime?
+  createdAt      DateTime  @default(now())
+
+  item    Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id])
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([itemId])
+  @@index([userId])
+}
+
+// ─── ATTACHMENTS ─────────────────────────────────────────────────────────────
+
+model Attachment {
+  id        String         @id @default(cuid())
+  itemId    String
+  type      AttachmentType
+  name      String
+  url       String
+  createdAt DateTime       @default(now())
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+}
+
+enum AttachmentType {
+  URL
+  TEXT
+}
+
+// ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  entityId  String?          // itemId, boardId, etc.
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([readAt])
+}
+
+enum NotificationType {
+  ITEM_ASSIGNED
+  ITEM_UPDATED
+  COMMENT_ADDED
+  COMMENT_MENTION
+  STATUS_CHANGED
+  DUE_DATE_APPROACHING
+  AUTOMATION_TRIGGERED
+}
+
+// ─── AUTOMATIONS ─────────────────────────────────────────────────────────────
+
+model Automation {
+  id            String        @id @default(cuid())
+  boardId       String
+  createdById   String?
+  name          String
+  enabled       Boolean       @default(true)
+  triggerType   TriggerType
+  triggerConfig Json          @default("{}")
+  conditions    Json          @default("[]")
+  nextRunAt     DateTime?     // for time-based triggers
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  board      Board           @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  createdBy  User?           @relation(fields: [createdById], references: [id])
+  actions    AutomationAction[]
+  runs       AutomationRun[]
+
+  @@index([boardId])
+  @@index([enabled, nextRunAt])
+}
+
+enum TriggerType {
+  STATUS_CHANGED
+  DATE_ARRIVES
+  ITEM_CREATED
+  ITEM_MOVED
+  COLUMN_CHANGED
+  ASSIGNEE_CHANGED
+  EVERY_PERIOD
+  DUE_DATE_APPROACHING
+}
+
+model AutomationAction {
+  id           String     @id @default(cuid())
+  automationId String
+  position     Int        @default(0)
+  actionType   ActionType
+  config       Json       @default("{}")
+
+  automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@index([automationId])
+}
+
+enum ActionType {
+  NOTIFY_PERSON
+  NOTIFY_ASSIGNEES
+  SEND_EMAIL
+  CHANGE_STATUS
+  CHANGE_COLUMN_VALUE
+  MOVE_TO_GROUP
+  ASSIGN_PERSON
+  CREATE_ITEM
+  DELETE_ITEM
+  SET_DATE
+}
+
+model AutomationRun {
+  id           String          @id @default(cuid())
+  automationId String
+  itemId       String?
+  status       RunStatus       @default(PENDING)
+  error        String?         @db.Text
+  triggeredAt  DateTime        @default(now())
+  completedAt  DateTime?
+
+  automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  item       Item?      @relation(fields: [itemId], references: [id])
+
+  @@index([automationId])
+  @@index([triggeredAt])
+}
+
+enum RunStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+// ─── WEBHOOKS ────────────────────────────────────────────────────────────────
+
+model Webhook {
+  id        String   @id @default(cuid())
+  boardId   String
+  url       String
+  events    Json     @default("[]")  // ["create_item", "update_column_value", ...]
+  secret    String?
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId])
+}

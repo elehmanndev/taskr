@@ -1,0 +1,70 @@
+version: '3.9'
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: taskr
+      MYSQL_USER: taskr
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-taskr}
+    volumes:
+      - ${DATA_PATH:-./data}/mysql:/var/lib/mysql
+    ports:
+      - '${MYSQL_PORT:-3307}:3306'
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - ${DATA_PATH:-./data}/redis:/data
+    ports:
+      - '${REDIS_PORT:-6380}:6379'
+
+  server:
+    build: ./server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      DATABASE_URL: mysql://taskr:${MYSQL_PASSWORD:-taskr}@db:3306/taskr
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@taskr.app}
+      CLIENT_URL: ${CLIENT_URL:-https://taskr.elehmann.dev}
+      NODE_ENV: production
+      PORT: 3001
+    ports:
+      - '${SERVER_PORT:-3001}:3001'
+
+  client:
+    build: ./client
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - '${CLIENT_PORT:-3000}:80'
+
+  # Cloudflare Tunnel — exposes taskr.elehmann.dev without port forwarding
+  # Create tunnel at https://one.dash.cloudflare.com → Networks → Tunnels
+  # Route: taskr.elehmann.dev → http://client:80
+  # Route: api.taskr.elehmann.dev → http://server:3001 (or use /api path routing)
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - client
+      - server
