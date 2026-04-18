@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
-import { RRule } from 'rrule'
+import rrulePkg from 'rrule'
+const { RRule } = rrulePkg
 
 export async function notificationRoutes(app: FastifyInstance) {
   const auth = { onRequest: [(app as any).authenticate] }

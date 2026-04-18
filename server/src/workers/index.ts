@@ -4,7 +4,8 @@ import { prisma } from '../lib/prisma.js'
 import { evaluateAutomations } from '../services/automationEngine.js'
 import { sendEmail } from '../lib/email.js'
 import { emitToBoard } from '../lib/socket.js'
-import { RRule } from 'rrule'
+import rrulePkg from 'rrule'
+const { RRule } = rrulePkg
 
 // ── Worker 1: Evaluate triggers ──────────────────────────────────────────────
 const triggerWorker = new Worker(
