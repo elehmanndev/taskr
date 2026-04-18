@@ -2,9 +2,15 @@
  * Imports a one-time dump of Monday.com data (users + MKT VPT board) into Taskr.
  *
  * Expects these files in ./monday-dump/ (relative to this script):
- *   - users.json         Array of Monday users
- *   - board.json         Board schema (columns with settings, groups)
- *   - items-page-*.json  One or more pages of items from get_board_items_page
+ *   - users.json             Array of Monday users
+ *   - board.json             Board schema (columns with settings, groups)
+ *   - items-page-1.json      Items from the Social (top) group
+ *   - items-vacaciones.json  estado=Vacaciones → Vacaciones/compensaciones group
+ *   - items-compensa.json    estado=Compensa   → same bucket as vacaciones
+ *   - items-guardia.json     estado=Guardia    → Guardias finde group
+ *   - items-bajas.json       estado=Bajas      → Bajas group
+ *
+ * See SOURCE_TO_MONDAY_GROUP below for the file → target group mapping.
  *
  * Run inside the server container:
  *   docker compose exec server node scripts/import-monday.js
@@ -54,15 +60,33 @@ function readJson<T>(file: string): T {
   return JSON.parse(fs.readFileSync(path.join(DUMP_DIR, file), 'utf8'));
 }
 
+// Source file → Monday group ID. The import script resolves these to Taskr group IDs after groups are created.
+const SOURCE_TO_MONDAY_GROUP: Record<string, string> = {
+  'items-page-1.json':     '1695378509_hoja_de_c_lculo_sin', // Social (top group)
+  'items-vacaciones.json': 'grupo_nuevo92850',               // Vacaciones, compensaciones
+  'items-compensa.json':   'grupo_nuevo92850',               // same bucket
+  'items-guardia.json':    'grupo_nuevo56127',               // Guardias finde
+  'items-bajas.json':      'grupo_nuevo__1',                 // Bajas
+};
+
 async function main() {
   const users = readJson<MondayUser[]>('users.json');
   const board = readJson<{ name: string; columns: MondayColumn[]; groups: MondayGroup[]; topGroupId: string }>('board.json');
 
-  const itemPages = fs.readdirSync(DUMP_DIR)
-    .filter(f => /^items-page-\d+\.json$/.test(f))
-    .sort()
-    .map(f => readJson<{ items: MondayItem[] }>(f));
-  const items = itemPages.flatMap(p => p.items);
+  // Load every configured source file; tag each item with its target Monday group ID.
+  const tagged: Array<{ item: MondayItem; mondayGroupId: string }> = [];
+  for (const [file, mondayGroupId] of Object.entries(SOURCE_TO_MONDAY_GROUP)) {
+    const filePath = path.join(DUMP_DIR, file);
+    if (!fs.existsSync(filePath)) {
+      console.warn(`Skipping missing ${file}`);
+      continue;
+    }
+    const { items: pageItems } = readJson<{ items: MondayItem[] }>(file);
+    for (const item of pageItems) tagged.push({ item, mondayGroupId });
+  }
+  // De-dupe by Monday item ID (status-filtered dumps may overlap — e.g. compensa-flagged rows also returned under estado=2).
+  const seen = new Set<string>();
+  const items = tagged.filter(t => (seen.has(t.item.id) ? false : (seen.add(t.item.id), true)));
 
   const org = await prisma.org.findUnique({ where: { slug: ORG_SLUG } });
   if (!org) throw new Error(`Org "${ORG_SLUG}" not found. Create it first.`);
@@ -168,15 +192,17 @@ async function main() {
   }
   console.log(`Created ${mondayGroupIdToTaskrId.size} groups`);
 
-  // --- Items (all go into the top group — the page slice returned items only from there) ---
-  const topTaskrGroupId = mondayGroupIdToTaskrId.get(board.topGroupId);
-  if (!topTaskrGroupId) throw new Error(`topGroup not mapped: ${board.topGroupId}`);
-
+  // --- Items (routed to target groups by source file) ---
   const me = await prisma.user.findUnique({ where: { email: 'elehmann@viajesparati.com' } });
 
   let itemPos = 0;
   let assigneeCount = 0;
-  for (const mi of items) {
+  for (const { item: mi, mondayGroupId } of items) {
+    const taskrGroupId = mondayGroupIdToTaskrId.get(mondayGroupId);
+    if (!taskrGroupId) {
+      console.warn(`Skipping item ${mi.id} — no group mapping for ${mondayGroupId}`);
+      continue;
+    }
     const columnValues: Record<string, any> = {};
     const assigneeUserIds = new Set<string>();
 
@@ -249,7 +275,7 @@ async function main() {
     const item = await prisma.item.create({
       data: {
         boardId: newBoard.id,
-        groupId: topTaskrGroupId,
+        groupId: taskrGroupId,
         name: mi.name,
         columnValues,
         position: itemPos++,
