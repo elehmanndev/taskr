@@ -1,11 +1,17 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
 import { emitToBoard } from '../lib/socket.js'
+import {
+  requireBoardAccess,
+  requireGroupAccess,
+  requireItemAccessForComment,
+  requireCommentOwner,
+} from '../middleware/access.js'
 
 export async function groupRoutes(app: FastifyInstance) {
   const auth = { onRequest: [(app as any).authenticate] }
 
-  app.post('/', auth, async (request, reply) => {
+  app.post('/', { onRequest: auth.onRequest, preHandler: requireBoardAccess }, async (request, reply) => {
     const { boardId } = request.params as { boardId: string }
     const { name, color } = request.body as any
 
@@ -23,8 +29,9 @@ export async function groupRoutes(app: FastifyInstance) {
     return reply.code(201).send(group)
   })
 
-  app.patch('/:groupId', auth, async (request) => {
-    const { boardId, groupId } = request.params as { boardId: string; groupId: string }
+  app.patch('/:groupId', { onRequest: auth.onRequest, preHandler: requireGroupAccess }, async (request) => {
+    const { groupId } = request.params as { groupId: string }
+    const boardId = ((request as any).group as { boardId: string }).boardId
     const body = request.body as any
 
     const group = await prisma.group.update({
@@ -41,8 +48,9 @@ export async function groupRoutes(app: FastifyInstance) {
     return group
   })
 
-  app.delete('/:groupId', auth, async (request, reply) => {
-    const { boardId, groupId } = request.params as { boardId: string; groupId: string }
+  app.delete('/:groupId', { onRequest: auth.onRequest, preHandler: requireGroupAccess }, async (request, reply) => {
+    const { groupId } = request.params as { groupId: string }
+    const boardId = ((request as any).group as { boardId: string }).boardId
     await prisma.group.delete({ where: { id: groupId } })
     emitToBoard(boardId, 'group:deleted', { groupId })
     return reply.code(204).send()
@@ -54,7 +62,7 @@ export async function groupRoutes(app: FastifyInstance) {
 export async function commentRoutes(app: FastifyInstance) {
   const auth = { onRequest: [(app as any).authenticate] }
 
-  app.get('/', auth, async (request) => {
+  app.get('/', { onRequest: auth.onRequest, preHandler: requireItemAccessForComment }, async (request) => {
     const { itemId } = request.params as { itemId: string }
     return prisma.comment.findMany({
       where: { itemId, parentId: null },
@@ -66,18 +74,34 @@ export async function commentRoutes(app: FastifyInstance) {
     })
   })
 
-  app.post('/', auth, async (request, reply) => {
+  app.post('/', { onRequest: auth.onRequest, preHandler: requireItemAccessForComment }, async (request, reply) => {
     const { itemId } = request.params as { itemId: string }
     const { sub } = request.user as { sub: string }
     const { body, parentId, mentions = [] } = request.body as any
+    const board = (request as any).board as { orgId: string }
+
+    // Only allow mentioning users who share the org with the commenter
+    const safeMentions: Array<{ userId: string; name?: string }> = []
+    if (Array.isArray(mentions) && mentions.length) {
+      const mentionIds = mentions.map((m: any) => m?.userId).filter(Boolean)
+      const validMembers = await prisma.orgMember.findMany({
+        where: { orgId: board.orgId, userId: { in: mentionIds } },
+        select: { userId: true },
+      })
+      const validSet = new Set(validMembers.map((m) => m.userId))
+      for (const m of mentions) {
+        if (m?.userId && validSet.has(m.userId)) {
+          safeMentions.push({ userId: m.userId, name: typeof m.name === 'string' ? m.name : undefined })
+        }
+      }
+    }
 
     const comment = await prisma.comment.create({
-      data: { itemId, userId: sub, body, parentId, mentions },
+      data: { itemId, userId: sub, body, parentId, mentions: safeMentions },
       include: { user: true },
     })
 
-    // Notify mentioned users
-    for (const mention of mentions) {
+    for (const mention of safeMentions) {
       await prisma.notification.create({
         data: {
           userId: mention.userId,
@@ -97,7 +121,7 @@ export async function commentRoutes(app: FastifyInstance) {
     return reply.code(201).send(comment)
   })
 
-  app.patch('/:commentId', auth, async (request) => {
+  app.patch('/:commentId', { onRequest: auth.onRequest, preHandler: requireCommentOwner }, async (request) => {
     const { commentId } = request.params as { commentId: string }
     const { body } = request.body as { body: string }
 
@@ -108,7 +132,7 @@ export async function commentRoutes(app: FastifyInstance) {
     })
   })
 
-  app.delete('/:commentId', auth, async (request, reply) => {
+  app.delete('/:commentId', { onRequest: auth.onRequest, preHandler: requireCommentOwner }, async (request, reply) => {
     const { commentId } = request.params as { commentId: string }
     await prisma.comment.delete({ where: { id: commentId } })
     return reply.code(204).send()

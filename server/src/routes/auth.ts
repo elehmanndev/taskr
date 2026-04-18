@@ -6,8 +6,8 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 export async function authRoutes(app: FastifyInstance) {
 
-  // Exchange Google ID token for our JWT
-  app.post('/google', async (request, reply) => {
+  // Exchange Google ID token for our JWT (tighter rate limit: 10/min per IP)
+  app.post('/google', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
     const { idToken } = request.body as { idToken: string }
 
     const ticket = await googleClient.verifyIdToken({
@@ -16,7 +16,7 @@ export async function authRoutes(app: FastifyInstance) {
     })
 
     const payload = ticket.getPayload()
-    if (!payload?.email) return reply.code(400).send({ error: 'Invalid token' })
+    if (!payload?.email || !payload.email_verified) return reply.code(400).send({ error: 'Invalid token' })
 
     // Match by email first so pre-seeded users (no googleId yet) link cleanly on first login.
     const existing = await prisma.user.findUnique({ where: { email: payload.email } })

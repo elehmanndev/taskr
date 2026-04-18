@@ -2,15 +2,25 @@ import type { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
 import { emitToBoard } from '../lib/socket.js'
 import { automationQueue } from '../lib/queues.js'
+import { requireBoardAccess, requireItemAccess } from '../middleware/access.js'
 
 export async function itemRoutes(app: FastifyInstance) {
   const auth = { onRequest: [(app as any).authenticate] }
 
   // Create item
-  app.post('/', auth, async (request, reply) => {
+  app.post('/', { onRequest: auth.onRequest, preHandler: requireBoardAccess }, async (request, reply) => {
     const { boardId } = request.params as { boardId: string }
     const { sub } = request.user as { sub: string }
     const { name, groupId, columnValues = {} } = request.body as any
+
+    // Verify the target group belongs to this board
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { boardId: true },
+    })
+    if (!group || group.boardId !== boardId) {
+      return reply.code(400).send({ error: 'Invalid groupId' })
+    }
 
     // Get max position in group
     const last = await prisma.item.findFirst({
@@ -48,9 +58,21 @@ export async function itemRoutes(app: FastifyInstance) {
   })
 
   // Update item (name, columnValues, groupId, position)
-  app.patch('/:itemId', auth, async (request) => {
-    const { boardId, itemId } = request.params as { boardId: string; itemId: string }
+  app.patch('/:itemId', { onRequest: auth.onRequest, preHandler: requireItemAccess }, async (request, reply) => {
+    const { itemId } = request.params as { itemId: string }
+    const boardId = ((request as any).item as { boardId: string }).boardId
     const body = request.body as any
+
+    // If caller is moving groups, verify the target group is in the same board
+    if (body.groupId !== undefined) {
+      const target = await prisma.group.findUnique({
+        where: { id: body.groupId },
+        select: { boardId: true },
+      })
+      if (!target || target.boardId !== boardId) {
+        return reply.code(400).send({ error: 'Invalid groupId' })
+      }
+    }
 
     const prev = await prisma.item.findUnique({
       where: { id: itemId },
@@ -108,10 +130,24 @@ export async function itemRoutes(app: FastifyInstance) {
   })
 
   // Bulk reorder (drag and drop)
-  app.post('/reorder', auth, async (request) => {
+  app.post('/reorder', { onRequest: auth.onRequest, preHandler: requireBoardAccess }, async (request, reply) => {
     const { boardId } = request.params as { boardId: string }
     const { updates } = request.body as {
       updates: Array<{ id: string; groupId: string; position: number }>
+    }
+
+    // Verify every item id and every target groupId belongs to this board
+    const itemIds = updates.map((u) => u.id)
+    const groupIds = [...new Set(updates.map((u) => u.groupId))]
+    const [items, groups] = await Promise.all([
+      prisma.item.findMany({ where: { id: { in: itemIds } }, select: { id: true, boardId: true } }),
+      prisma.group.findMany({ where: { id: { in: groupIds } }, select: { id: true, boardId: true } }),
+    ])
+    if (items.length !== itemIds.length || items.some((i) => i.boardId !== boardId)) {
+      return reply.code(400).send({ error: 'Invalid item ids' })
+    }
+    if (groups.length !== groupIds.length || groups.some((g) => g.boardId !== boardId)) {
+      return reply.code(400).send({ error: 'Invalid group ids' })
     }
 
     await prisma.$transaction(
@@ -128,15 +164,16 @@ export async function itemRoutes(app: FastifyInstance) {
   })
 
   // Delete item
-  app.delete('/:itemId', auth, async (request, reply) => {
-    const { boardId, itemId } = request.params as { boardId: string; itemId: string }
+  app.delete('/:itemId', { onRequest: auth.onRequest, preHandler: requireItemAccess }, async (request, reply) => {
+    const { itemId } = request.params as { itemId: string }
+    const boardId = ((request as any).item as { boardId: string }).boardId
     await prisma.item.delete({ where: { id: itemId } })
     emitToBoard(boardId, 'item:deleted', { itemId })
     return reply.code(204).send()
   })
 
   // Get single item (for detail panel)
-  app.get('/:itemId', auth, async (request, reply) => {
+  app.get('/:itemId', { onRequest: auth.onRequest, preHandler: requireItemAccess }, async (request, reply) => {
     const { itemId } = request.params as { itemId: string }
 
     const item = await prisma.item.findUnique({

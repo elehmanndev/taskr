@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
+import { requireFolderAccess } from '../middleware/access.js'
 
 const CreateFolderSchema = z.object({
   name:        z.string().min(1).max(120),
@@ -65,13 +66,13 @@ export async function folderRoutes(app: FastifyInstance) {
     return reply.code(201).send(folder)
   })
 
-  app.patch('/:folderId', auth, async (request) => {
+  app.patch('/:folderId', { onRequest: auth.onRequest, preHandler: requireFolderAccess }, async (request) => {
     const { folderId } = request.params as { folderId: string }
     const patch = UpdateFolderSchema.parse(request.body)
     return prisma.folder.update({ where: { id: folderId }, data: patch })
   })
 
-  app.delete('/:folderId', auth, async (request, reply) => {
+  app.delete('/:folderId', { onRequest: auth.onRequest, preHandler: requireFolderAccess }, async (request, reply) => {
     const { folderId } = request.params as { folderId: string }
     // Boards in the folder get moved to workspace root (folderId=null)
     await prisma.$transaction([
