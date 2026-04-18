@@ -1,6 +1,7 @@
 services:
   db:
     image: mysql:8.0
+    container_name: taskr-db
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
@@ -18,6 +19,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    container_name: taskr-redis
     restart: unless-stopped
     volumes:
       - ${DATA_PATH:-./data}/redis:/data
@@ -26,6 +28,7 @@ services:
 
   server:
     build: ./server
+    container_name: taskr-server
     restart: unless-stopped
     depends_on:
       db:
@@ -46,6 +49,7 @@ services:
       - '${SERVER_PORT:-3001}:3001'
 
   client:
+    container_name: taskr-client
     build:
       context: ./client
       args:
@@ -63,6 +67,7 @@ services:
   # Route: api.taskr.example.com → http://server:3001 (or use /api path routing)
   tunnel:
     image: cloudflare/cloudflared:latest
+    container_name: taskr-tunnel
     restart: unless-stopped
     command: tunnel run
     environment:
