@@ -18,20 +18,39 @@ export async function authRoutes(app: FastifyInstance) {
     const payload = ticket.getPayload()
     if (!payload?.email) return reply.code(400).send({ error: 'Invalid token' })
 
-    const user = await prisma.user.upsert({
-      where: { googleId: payload.sub },
-      update: {
-        name: payload.name ?? '',
-        avatarUrl: payload.picture,
-        email: payload.email,
-      },
-      create: {
-        googleId: payload.sub,
-        email: payload.email,
-        name: payload.name ?? '',
-        avatarUrl: payload.picture,
-      },
-    })
+    // Match by email first so pre-seeded users (no googleId yet) link cleanly on first login.
+    const existing = await prisma.user.findUnique({ where: { email: payload.email } })
+    const user = existing
+      ? await prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            googleId: payload.sub,
+            name: payload.name ?? existing.name,
+            avatarUrl: payload.picture ?? existing.avatarUrl,
+          },
+        })
+      : await prisma.user.create({
+          data: {
+            googleId: payload.sub,
+            email: payload.email,
+            name: payload.name ?? '',
+            avatarUrl: payload.picture,
+          },
+        })
+
+    // Auto-join any org that claims this email's domain.
+    const domain = payload.email.split('@')[1]?.toLowerCase()
+    if (domain) {
+      const orgs = await prisma.org.findMany()
+      const matching = orgs.filter(o => Array.isArray(o.emailDomains) && (o.emailDomains as string[]).map(d => d.toLowerCase()).includes(domain))
+      for (const org of matching) {
+        await prisma.orgMember.upsert({
+          where: { orgId_userId: { orgId: org.id, userId: user.id } },
+          create: { orgId: org.id, userId: user.id, role: 'MEMBER' },
+          update: {},
+        })
+      }
+    }
 
     const token = app.jwt.sign(
       { sub: user.id, email: user.email },

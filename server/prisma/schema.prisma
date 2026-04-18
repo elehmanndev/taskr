@@ -10,12 +10,13 @@ datasource db {
 // ─── ORGS & USERS ────────────────────────────────────────────────────────────
 
 model Org {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  logoUrl   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  logoUrl      String?
+  emailDomains Json     @default("[]")   // ["viajesparati.com"] — Google sign-ins with matching domain auto-join
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   members    OrgMember[]
   workspaces Workspace[]

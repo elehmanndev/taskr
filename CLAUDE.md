@@ -334,6 +334,7 @@ npx prisma studio                                         # visual DB browser
 - No `@fastify/websocket` — Socket.io is the sole websocket layer
 - Nginx is the single entry point: serves SPA + proxies API + upgrades WebSocket
 - All API calls from client go to same origin (no CORS in production, nginx handles routing)
+- **Every shell command block must be prefixed with where to run it** — machine (laptop vs Unraid vs container), shell (PowerShell vs bash vs docker exec), and directory. Commands vary between these contexts (e.g. `$env:VAR=...` in PowerShell vs `VAR=... cmd` in bash).
 
 ## Future: Taskr MCP Server
 
