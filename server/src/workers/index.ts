@@ -1,5 +1,5 @@
 import { Worker } from 'bullmq'
-import { redis } from '../lib/redis.js'
+import { redis } from '../lib/queues.js'
 import { prisma } from '../lib/prisma.js'
 import { evaluateAutomations } from '../services/automationEngine.js'
 import { sendEmail } from '../lib/email.js'
@@ -36,7 +36,7 @@ const actionWorker = new Worker(
       throw err
     }
   },
-  { connection: redis, attempts: 3, backoff: { type: 'exponential', delay: 2000 } }
+  { connection: redis }
 )
 
 // ── Worker 3: Time-based triggers (cron) ─────────────────────────────────────
