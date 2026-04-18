@@ -65,13 +65,10 @@ export default function Login() {
         <h1 className="text-2xl font-bold mb-1">Welcome to Taskr</h1>
         <p className="text-sm text-gray-500 mb-6">Sign in to continue</p>
 
-        {loading ? (
-          <div className="text-sm text-gray-500">Loading…</div>
-        ) : (
-          <div className="flex justify-center">
-            <div ref={btnRef} />
-          </div>
-        )}
+        {loading && <div className="text-sm text-gray-500">Loading…</div>}
+        <div className={loading ? 'hidden' : 'flex justify-center'}>
+          <div ref={btnRef} />
+        </div>
 
         {error && (
           <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
