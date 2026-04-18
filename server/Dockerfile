@@ -1,8 +1,6 @@
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
-
-ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/node_modules/.prisma/client/libquery_engine-linux-musl-openssl-3.0.x.so.node
 
 COPY package*.json ./
 COPY prisma ./prisma/
