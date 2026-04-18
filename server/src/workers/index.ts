@@ -108,6 +108,15 @@ async function runAction({
 
     case 'NOTIFY_PERSON': {
       const { userId, message } = config
+      // Only notify users who are members of this board's org
+      const board = await prisma.board.findUnique({ where: { id: boardId }, select: { orgId: true } })
+      if (!board) break
+      const isMember = await prisma.orgMember.findUnique({
+        where: { orgId_userId: { orgId: board.orgId, userId } },
+        select: { userId: true },
+      })
+      if (!isMember) break
+
       const item = itemId ? await prisma.item.findUnique({ where: { id: itemId } }) : null
 
       await prisma.notification.create({
@@ -148,6 +157,17 @@ async function runAction({
 
     case 'SEND_EMAIL': {
       const { to, subject, body } = config
+      // Prevent open relay — recipient must be a registered org member
+      const board = await prisma.board.findUnique({ where: { id: boardId }, select: { orgId: true } })
+      if (!board) break
+      const recipient = await prisma.user.findFirst({
+        where: { email: to, orgs: { some: { orgId: board.orgId } } },
+        select: { email: true },
+      })
+      if (!recipient) {
+        console.warn(`SEND_EMAIL: recipient ${to} is not an org member, skipping`)
+        break
+      }
       await sendEmail({ to, subject, html: body })
       break
     }
@@ -171,6 +191,12 @@ async function runAction({
 
     case 'MOVE_TO_GROUP': {
       if (!itemId) break
+      // Verify target group belongs to this board (prevents cross-board item movement)
+      const targetGroup = await prisma.group.findUnique({
+        where: { id: config.groupId },
+        select: { boardId: true },
+      })
+      if (!targetGroup || targetGroup.boardId !== boardId) break
       const updated = await prisma.item.update({
         where: { id: itemId },
         data: { groupId: config.groupId },

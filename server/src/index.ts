@@ -2,6 +2,8 @@ import Fastify from 'fastify'
 import fastifyCookie from '@fastify/cookie'
 import fastifyJwt from '@fastify/jwt'
 import fastifyCors from '@fastify/cors'
+import fastifyHelmet from '@fastify/helmet'
+import fastifyRateLimit from '@fastify/rate-limit'
 
 import { authRoutes } from './routes/auth.js'
 import { orgRoutes } from './routes/orgs.js'
@@ -14,9 +16,23 @@ import { automationRoutes, notificationRoutes } from './routes/automations.js'
 import { initSocket } from './lib/socket.js'
 import { startWorkers } from './workers/index.js'
 
+// Fail fast if JWT_SECRET is missing or still the example placeholder
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'change-me-to-a-random-64-char-string') {
+  console.error('FATAL: JWT_SECRET is not set or is the default value. Set a strong secret in .env')
+  process.exit(1)
+}
+
 const app = Fastify({ logger: true })
 
 // ── Plugins ──────────────────────────────────────────────────────────────────
+await app.register(fastifyHelmet, {
+  contentSecurityPolicy: false, // CSP handled by nginx / Cloudflare
+})
+await app.register(fastifyRateLimit, {
+  max: 120,        // 120 req/min per IP globally
+  timeWindow: '1 minute',
+  errorResponseBuilder: () => ({ error: 'Too many requests' }),
+})
 await app.register(fastifyCors, {
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
@@ -25,6 +41,16 @@ await app.register(fastifyCookie)
 await app.register(fastifyJwt, {
   secret: process.env.JWT_SECRET!,
   cookie: { cookieName: 'token', signed: false },
+})
+
+// ── Global error handler ──────────────────────────────────────────────────────
+app.setErrorHandler((error, _request, reply) => {
+  const status = error.statusCode ?? 500
+  if (status >= 500) {
+    app.log.error(error)
+    return reply.code(500).send({ error: 'Internal server error' })
+  }
+  return reply.code(status).send({ error: error.message })
 })
 
 // ── Auth decorator ────────────────────────────────────────────────────────────

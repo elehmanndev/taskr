@@ -6,8 +6,8 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 export async function authRoutes(app: FastifyInstance) {
 
-  // Exchange Google ID token for our JWT
-  app.post('/google', async (request, reply) => {
+  // Exchange Google ID token for our JWT (tighter rate limit: 10/min per IP)
+  app.post('/google', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
     const { idToken } = request.body as { idToken: string }
 
     const ticket = await googleClient.verifyIdToken({

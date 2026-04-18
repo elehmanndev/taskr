@@ -12,6 +12,20 @@ export function initSocket(app: FastifyInstance) {
     },
   })
 
+  // Reject unauthenticated connections — parse the httpOnly cookie from handshake
+  io.use((socket, next) => {
+    const cookieHeader = socket.handshake.headers.cookie ?? ''
+    const match = cookieHeader.match(/(?:^|;\s*)token=([^;]+)/)
+    const token = match?.[1]
+    if (!token) return next(new Error('Unauthorized'))
+    try {
+      ;(socket as any).user = app.jwt.verify(token)
+      next()
+    } catch {
+      next(new Error('Unauthorized'))
+    }
+  })
+
   io.on('connection', (socket) => {
     // Client joins a board room on connect
     socket.on('board:join', (boardId: string) => {
