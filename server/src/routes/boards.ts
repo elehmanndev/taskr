@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { emitToBoard } from '../lib/socket.js'
+import { requireBoardAccess, requireOrgMember } from '../middleware/access.js'
 
 const CreateBoardSchema = z.object({
   name: z.string().min(1).max(255),
@@ -36,7 +37,7 @@ export async function boardRoutes(app: FastifyInstance) {
   const auth = { onRequest: [(app as any).authenticate] }
 
   // List boards for an org
-  app.get('/', auth, async (request) => {
+  app.get('/', { onRequest: auth.onRequest, preHandler: requireOrgMember({ from: 'query' }) }, async (request) => {
     const { sub } = request.user as { sub: string }
     const { orgId } = request.query as { orgId: string }
 
@@ -92,7 +93,7 @@ export async function boardRoutes(app: FastifyInstance) {
   })
 
   // Create board with default groups + columns
-  app.post('/', auth, async (request, reply) => {
+  app.post('/', { onRequest: auth.onRequest, preHandler: requireOrgMember({ from: 'query' }) }, async (request, reply) => {
     const { sub } = request.user as { sub: string }
     const body = CreateBoardSchema.parse(request.body)
     const { orgId } = request.query as { orgId: string }
@@ -136,7 +137,7 @@ export async function boardRoutes(app: FastifyInstance) {
   })
 
   // Update board
-  app.patch('/:boardId', auth, async (request) => {
+  app.patch('/:boardId', { onRequest: auth.onRequest, preHandler: requireBoardAccess }, async (request) => {
     const { boardId } = request.params as { boardId: string }
     const body = request.body as any
 
@@ -150,7 +151,7 @@ export async function boardRoutes(app: FastifyInstance) {
   })
 
   // Delete board
-  app.delete('/:boardId', auth, async (request, reply) => {
+  app.delete('/:boardId', { onRequest: auth.onRequest, preHandler: requireBoardAccess }, async (request, reply) => {
     const { boardId } = request.params as { boardId: string }
     await prisma.board.delete({ where: { id: boardId } })
     return reply.code(204).send()

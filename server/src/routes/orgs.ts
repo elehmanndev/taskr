@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
+import { requireOrgAdmin } from '../middleware/access.js'
 
 export async function orgRoutes(app: FastifyInstance) {
   const auth = { onRequest: [(app as any).authenticate] }
@@ -40,10 +41,19 @@ export async function orgRoutes(app: FastifyInstance) {
     return org
   })
 
-  // Invite user to org (by email)
-  app.post('/:orgId/members', auth, async (request, reply) => {
+  // Invite user to org (by email) — OWNER/ADMIN only
+  app.post('/:orgId/members', { onRequest: auth.onRequest, preHandler: requireOrgAdmin() }, async (request, reply) => {
     const { orgId } = request.params as { orgId: string }
     const { email, role = 'MEMBER' } = request.body as any
+    const callerRole = (request as any).orgRole as 'OWNER' | 'ADMIN'
+
+    // Only OWNER can grant OWNER/ADMIN; ADMINs can only add MEMBER/GUEST
+    if (callerRole !== 'OWNER' && (role === 'OWNER' || role === 'ADMIN')) {
+      return reply.code(403).send({ error: 'Only OWNER can grant OWNER or ADMIN' })
+    }
+    if (!['OWNER', 'ADMIN', 'MEMBER', 'GUEST'].includes(role)) {
+      return reply.code(400).send({ error: 'Invalid role' })
+    }
 
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) return reply.code(404).send({ error: 'User not found' })
@@ -57,10 +67,28 @@ export async function orgRoutes(app: FastifyInstance) {
     return reply.code(201).send(member)
   })
 
-  // Remove member
-  app.delete('/:orgId/members/:userId', auth, async (request, reply) => {
+  // Remove member — OWNER/ADMIN only, block removing last OWNER
+  app.delete('/:orgId/members/:userId', { onRequest: auth.onRequest, preHandler: requireOrgAdmin() }, async (request, reply) => {
     const { orgId, userId } = request.params as { orgId: string; userId: string }
-    await prisma.orgMember.deleteMany({ where: { orgId, userId } })
+
+    const target = await prisma.orgMember.findUnique({
+      where: { orgId_userId: { orgId, userId } },
+      select: { role: true },
+    })
+    if (!target) return reply.code(204).send()
+
+    if (target.role === 'OWNER') {
+      const ownerCount = await prisma.orgMember.count({
+        where: { orgId, role: 'OWNER' },
+      })
+      if (ownerCount <= 1) {
+        return reply.code(400).send({ error: 'Cannot remove the last OWNER' })
+      }
+    }
+
+    await prisma.orgMember.delete({
+      where: { orgId_userId: { orgId, userId } },
+    })
     return reply.code(204).send()
   })
 }

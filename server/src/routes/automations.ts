@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma.js'
 import rrulePkg from 'rrule'
+import { requireBoardAccess, requireAutomationAccess } from '../middleware/access.js'
 const { RRule } = rrulePkg
 
 export async function notificationRoutes(app: FastifyInstance) {
@@ -54,7 +55,7 @@ export async function notificationRoutes(app: FastifyInstance) {
 export async function automationRoutes(app: FastifyInstance) {
   const auth = { onRequest: [(app as any).authenticate] }
 
-  app.get('/', auth, async (request) => {
+  app.get('/', { onRequest: auth.onRequest, preHandler: requireBoardAccess }, async (request) => {
     const { boardId } = request.params as { boardId: string }
     return prisma.automation.findMany({
       where: { boardId },
@@ -63,7 +64,7 @@ export async function automationRoutes(app: FastifyInstance) {
     })
   })
 
-  app.post('/', auth, async (request, reply) => {
+  app.post('/', { onRequest: auth.onRequest, preHandler: requireBoardAccess }, async (request, reply) => {
     const { boardId } = request.params as { boardId: string }
     const { sub } = request.user as { sub: string }
     const { name, triggerType, triggerConfig, conditions, actions } = request.body as any
@@ -98,7 +99,7 @@ export async function automationRoutes(app: FastifyInstance) {
     return reply.code(201).send(automation)
   })
 
-  app.patch('/:automationId', auth, async (request) => {
+  app.patch('/:automationId', { onRequest: auth.onRequest, preHandler: requireAutomationAccess }, async (request) => {
     const { automationId } = request.params as { automationId: string }
     const { enabled, name } = request.body as any
 
@@ -112,14 +113,14 @@ export async function automationRoutes(app: FastifyInstance) {
     })
   })
 
-  app.delete('/:automationId', auth, async (request, reply) => {
+  app.delete('/:automationId', { onRequest: auth.onRequest, preHandler: requireAutomationAccess }, async (request, reply) => {
     const { automationId } = request.params as { automationId: string }
     await prisma.automation.delete({ where: { id: automationId } })
     return reply.code(204).send()
   })
 
   // Run history
-  app.get('/:automationId/runs', auth, async (request) => {
+  app.get('/:automationId/runs', { onRequest: auth.onRequest, preHandler: requireAutomationAccess }, async (request) => {
     const { automationId } = request.params as { automationId: string }
     return prisma.automationRun.findMany({
       where: { automationId },
