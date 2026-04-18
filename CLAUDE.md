@@ -63,6 +63,15 @@ docker-compose.yml   MySQL + Redis + server + client + Cloudflare tunnel
 
 ## Architecture Notes
 
+### Server base image: `node:20-slim` (Debian) — NOT Alpine
+Prisma's Alpine `linux-musl` binary requires `libssl.so.1.1`, which Alpine 3.20 removed. Debian slim + `apt-get install openssl` works cleanly and Prisma auto-detects `linux-openssl-3.0.x`. Do NOT change `server/Dockerfile` back to `node:20-alpine` — you'll spend an hour on OpenSSL compat errors. The client Dockerfile uses Alpine and that's fine (nginx + static files only, no Prisma).
+
+### Vite env vars are build-time
+Any `VITE_*` variable must be passed as a `build.args` in `docker-compose.yml` AND declared `ARG`+`ENV` in `client/Dockerfile` before `npm run build`. Changing a `VITE_*` in `.env` requires `docker compose build --no-cache client`, not just `up -d`. If the client shows "Missing VITE_XXX in environment", that's the cause.
+
+### rrule is CommonJS
+`rrule` ships as CJS, so in the ESM-compiled server it must be imported as `import rrulePkg from 'rrule'; const { RRule } = rrulePkg`. Named-export `import { RRule } from 'rrule'` will crash at runtime with `SyntaxError: Named export 'RRule' not found`.
+
 ### Socket.io setup
 - Socket.io `Server` is attached to Fastify's underlying http server AFTER `app.listen()`.
 - Do NOT use `@fastify/websocket` — it conflicts with socket.io. Socket.io is the sole websocket layer.

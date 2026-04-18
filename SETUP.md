@@ -407,7 +407,66 @@ The client reads env vars at **build time** (they get baked in), not runtime. Th
 
 ---
 
-## Part 9: Future Stuff (Don't Worry About It Yet)
+## Part 9: Troubleshooting (Real Errors From First Deploy)
+
+These are the exact errors encountered during the first Unraid deploy (2026-04-18), with fixes. If you hit one of these on a re-deploy, jump here.
+
+### Server won't start — `libssl.so.1.1: No such file`
+```
+PrismaClientInitializationError: Unable to require(`libquery_engine-linux-musl.so.node`)
+Error loading shared library libssl.so.1.1: No such file or directory
+```
+**Cause:** Prisma's Alpine Linux binary requires OpenSSL 1.1, which Alpine 3.20 dropped.
+**Already fixed** in the repo: `server/Dockerfile` uses `node:20-slim` (Debian) + `apt-get install openssl`. If this regresses, do NOT switch back to `node:20-alpine`.
+
+### Client shows "Missing VITE_GOOGLE_CLIENT_ID in environment"
+**Cause:** Vite bakes env vars in at build time, not runtime. If you change `VITE_*` values in `.env`, `docker compose up -d` alone won't pick them up.
+**Fix:** `docker compose build --no-cache client && docker compose up -d`. The repo's `docker-compose.yml` passes `VITE_API_URL` and `VITE_GOOGLE_CLIENT_ID` through `build.args`.
+
+### Tunnel logs show `Unauthorized: Invalid tunnel secret`
+**Cause:** Wrong or corrupted `CLOUDFLARE_TUNNEL_TOKEN` in `.env`. Easy to grab the wrong string — Cloudflare shows both a tunnel UUID and a connector token. You need the **connector token** (long `eyJ...` base64 string from the "Install connector" page).
+**Fix:** Re-copy from Cloudflare dashboard → Networks → Tunnels → click your tunnel → Configure → Install connector → copy the token (looks like `eyJhIjoi...`). Replace in `.env`, then `docker compose up -d --force-recreate tunnel`.
+
+### `docker compose` warning: `CLOUDFLARE_TUNNEL_TOKEN variable is not set`
+**Cause:** The line is missing from `.env` (or got deleted). Easy to miss because `.env.example` has the variable but placeholder value.
+**Fix:** `grep CLOUDFLARE /mnt/user/appdata/taskr/.env` — should print the line. If empty, add it: `echo "CLOUDFLARE_TUNNEL_TOKEN=your-token-here" >> /mnt/user/appdata/taskr/.env`.
+
+### `prisma db push` fails with `Container is restarting`
+**Cause:** Server is in a crash loop — usually a code issue showing in `docker compose logs server`. `prisma db push` can't exec into a non-running container.
+**Fix:** `docker compose logs server --tail=30` to see the real error. Fix that first.
+
+### Port conflict on first `docker compose up -d`
+Unraid already runs containers on common ports. **Confirmed conflicts as of 2026-04-18:**
+- Port **3000** → `Nginx-Proxy-Manager-Official`
+- Port **3001** → `mcphub`
+- Port **6379** → existing `/Redis` container (Taskr uses 6380, no conflict)
+**Fix:** In `.env`, set `CLIENT_PORT=3003` and `SERVER_PORT=3002` (or any other free host ports). Doesn't affect the app itself — Cloudflare Tunnel talks to `client:80` over the Docker network, not the host.
+
+### First boot order matters
+The correct sequence on a fresh deploy:
+1. `docker compose up -d` — wait for MySQL healthcheck (~20s)
+2. `docker compose exec server npx prisma db push` — creates tables
+3. Seed org (SETUP.md §4.8)
+4. Sign in via Google at https://taskr.elehmann.dev — creates your User
+5. Attach your User to the org:
+   ```bash
+   docker compose exec server node -e "
+   const { PrismaClient } = require('@prisma/client');
+   const prisma = new PrismaClient();
+   (async () => {
+     const users = await prisma.user.findMany();
+     const user = users[0];
+     await prisma.orgMember.create({
+       data: { userId: user.id, orgId: 'YOUR_ORG_ID', role: 'OWNER' },
+     });
+     await prisma.\$disconnect();
+   })();
+   "
+   ```
+
+---
+
+## Part 10: Future Stuff (Don't Worry About It Yet)
 
 - **Hetzner VPS migration** — once the Unraid MVP is validated, we move to a real VPS on a Viajesparati subdomain.
 - **Taskr MCP Server** — a Claude-facing wrapper around the REST API so you can manage boards from a chat interface. Design notes are in `CLAUDE.md` → "Future: Taskr MCP Server".
