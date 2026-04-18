@@ -46,7 +46,11 @@ services:
       - '${SERVER_PORT:-3001}:3001'
 
   client:
-    build: ./client
+    build:
+      context: ./client
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
     restart: unless-stopped
     depends_on:
       - server
