@@ -69,6 +69,7 @@ services:
     restart: unless-stopped
     environment:
       GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET}
+      COMPOSE_PROJECT_NAME: taskr
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/app/repo
