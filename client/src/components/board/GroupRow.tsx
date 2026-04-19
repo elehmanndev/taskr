@@ -91,10 +91,10 @@ export default function GroupRow({ group, columns, colWidths, nameWidth, totalWi
           className="relative rounded-lg border border-border bg-surface shadow-card"
           style={{ minWidth: totalWidth }}
         >
-          {/* Colored left bar, rounded to match card corners */}
+          {/* Colored left bar — spans the items region only, so it doesn't clash with the header's rounded top-left or the add-item row's rounded bottom-left */}
           <div
-            className="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg z-10"
-            style={{ backgroundColor: color }}
+            className="absolute left-0 w-1 z-10"
+            style={{ backgroundColor: color, top: 40, bottom: 40 }}
           />
 
           {/* Sticky column header — pinned to top of the group card while scrolling */}
