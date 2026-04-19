@@ -61,6 +61,18 @@ services:
     ports:
       - '${CLIENT_PORT:-3000}:80'
 
+  # Auto-deploy webhook — receives GitHub pings and rebuilds the app
+  # Reached via Cloudflare Tunnel at deploy-taskr.elehmann.dev → http://webhook:9000
+  webhook:
+    build: ./deploy
+    container_name: taskr-webhook
+    restart: unless-stopped
+    environment:
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/app/repo
+
   # Cloudflare Tunnel — exposes taskr.example.com without port forwarding
   # Create tunnel at https://one.dash.cloudflare.com → Networks → Tunnels
   # Route: taskr.example.com → http://client:80
