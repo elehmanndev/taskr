@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 export interface TimelineValue {
   from?: string | null
@@ -9,6 +10,7 @@ interface TimelineCellProps {
   value?: TimelineValue | null
   onChange: (value: TimelineValue | null) => void
   readOnly?: boolean
+  groupColor?: string
 }
 
 function formatShort(iso?: string | null): string | null {
@@ -58,24 +60,39 @@ function computeProgress(value?: TimelineValue | null): ProgressInfo | null {
   return { pct, totalDays, elapsedDays, remainingDays, status }
 }
 
-export default function TimelineCell({ value, onChange, readOnly }: TimelineCellProps) {
+export default function TimelineCell({ value, onChange, readOnly, groupColor }: TimelineCellProps) {
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
   const [from, setFrom] = useState(value?.from ?? '')
   const [to, setTo] = useState(value?.to ?? '')
-  const ref = useRef<HTMLDivElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const popRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setFrom(value?.from ?? '')
     setTo(value?.to ?? '')
   }, [value?.from, value?.to])
 
+  useLayoutEffect(() => {
+    if (!open || !btnRef.current) return
+    const r = btnRef.current.getBoundingClientRect()
+    setPos({ top: r.bottom + 4, left: r.left })
+  }, [open])
+
   useEffect(() => {
     if (!open) return
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) commit()
+      const t = e.target as Node
+      if (btnRef.current?.contains(t) || popRef.current?.contains(t)) return
+      commit()
     }
+    const onScroll = () => commit()
     window.addEventListener('mousedown', onClick)
-    return () => window.removeEventListener('mousedown', onClick)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      window.removeEventListener('mousedown', onClick)
+      window.removeEventListener('scroll', onScroll, true)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, from, to])
 
@@ -95,14 +112,21 @@ export default function TimelineCell({ value, onChange, readOnly }: TimelineCell
   const label = formatRange(value)
   const progress = computeProgress(value)
 
-  const statusColor = progress?.status === 'past' ? '#00c875' : progress?.status === 'upcoming' ? '#8e94b8' : '#579bfc'
+  // Bar color: group color if available, else fall back to status-derived color.
+  const fallbackStatusColor =
+    progress?.status === 'past' ? '#00c875' :
+    progress?.status === 'upcoming' ? '#8e94b8' :
+    '#579bfc'
+  const barColor = groupColor || fallbackStatusColor
+
   const tooltip = progress
     ? `${progress.totalDays} día${progress.totalDays === 1 ? '' : 's'} · ${progress.elapsedDays} transcurrido${progress.elapsedDays === 1 ? '' : 's'} · ${progress.remainingDays} restante${progress.remainingDays === 1 ? '' : 's'}`
     : label
 
   return (
-    <div ref={ref} className="relative w-full h-full">
+    <div className="relative w-full h-full">
       <button
+        ref={btnRef}
         disabled={readOnly}
         onClick={() => setOpen((o) => !o)}
         title={tooltip}
@@ -111,11 +135,11 @@ export default function TimelineCell({ value, onChange, readOnly }: TimelineCell
         {progress ? (
           <div
             className="relative w-full h-6 rounded-full overflow-hidden flex items-center justify-center text-[11px] font-semibold truncate"
-            style={{ backgroundColor: `${statusColor}33`, color: 'var(--text-primary)' }}
+            style={{ backgroundColor: `${barColor}33`, color: 'var(--text-primary)' }}
           >
             <div
               className="absolute inset-y-0 left-0"
-              style={{ width: `${progress.pct}%`, backgroundColor: `${statusColor}66` }}
+              style={{ width: `${progress.pct}%`, backgroundColor: `${barColor}99` }}
             />
             <span className="relative px-2 truncate">{label}</span>
           </div>
@@ -125,8 +149,12 @@ export default function TimelineCell({ value, onChange, readOnly }: TimelineCell
           </span>
         )}
       </button>
-      {open && (
-        <div className="absolute z-30 top-full left-0 mt-1 w-64 bg-surface-raised border border-border rounded-md shadow-card p-3 space-y-2">
+      {open && pos && createPortal(
+        <div
+          ref={popRef}
+          className="fixed z-[100] w-64 bg-surface-raised border border-border rounded-md shadow-card p-3 space-y-2"
+          style={{ top: pos.top, left: pos.left }}
+        >
           <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
             Desde
             <input
@@ -155,7 +183,8 @@ export default function TimelineCell({ value, onChange, readOnly }: TimelineCell
               className="text-xs px-3 py-1 bg-accent text-text-on-accent rounded hover:bg-accent-hover"
             >Done</button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

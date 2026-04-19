@@ -73,7 +73,7 @@ export default function BoardView({ board }: BoardViewProps) {
   return (
     <div className="p-6 overflow-auto h-full scrollbar-thin bg-app">
       <div style={{ minWidth: totalWidth }}>
-        <div className="space-y-6">
+        <div>
           {groupsSorted.map((group) => (
             <GroupRow
               key={group.id}

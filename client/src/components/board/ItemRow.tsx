@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Column, Item } from '../../lib/types'
 import ColumnCell from '../columns/ColumnCell'
+import UpdateModal from '../item/UpdateModal'
 import { useBoardStore } from '../../stores/boardStore'
 import { UPDATES_COL_WIDTH } from './columnWidth'
 
@@ -10,14 +11,16 @@ interface ItemRowProps {
   colWidths: number[]
   nameWidth: number
   isLast?: boolean
+  groupColor?: string
 }
 
 const ROW_HEIGHT = 44
 
-export default function ItemRow({ item, columns, colWidths, nameWidth, isLast }: ItemRowProps) {
+export default function ItemRow({ item, columns, colWidths, nameWidth, isLast, groupColor }: ItemRowProps) {
   const { updateItem, deleteItem } = useBoardStore()
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(item.name)
+  const [updatesOpen, setUpdatesOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { setName(item.name) }, [item.name])
@@ -84,8 +87,9 @@ export default function ItemRow({ item, columns, colWidths, nameWidth, isLast }:
         style={{ width: UPDATES_COL_WIDTH, height: ROW_HEIGHT }}
       >
         <button
+          onClick={() => setUpdatesOpen(true)}
           className="relative w-7 h-7 flex items-center justify-center rounded-full text-text-muted hover:text-accent hover:bg-surface-hover"
-          title={commentCount ? `${commentCount} updates — click to add` : 'Write an update'}
+          title={commentCount ? `${commentCount} actualizaciones — clic para añadir` : 'Escribir una actualización'}
         >
           <span className="text-base leading-none">💬</span>
           {commentCount > 0 && (
@@ -104,9 +108,11 @@ export default function ItemRow({ item, columns, colWidths, nameWidth, isLast }:
           className="shrink-0 border-r border-border flex items-stretch"
           style={{ width: colWidths[i], height: ROW_HEIGHT }}
         >
-          <ColumnCell column={col} item={item} onChange={changeColumnValue} />
+          <ColumnCell column={col} item={item} onChange={changeColumnValue} groupColor={groupColor} />
         </div>
       ))}
+
+      <UpdateModal item={item} open={updatesOpen} onClose={() => setUpdatesOpen(false)} />
     </div>
   )
 }

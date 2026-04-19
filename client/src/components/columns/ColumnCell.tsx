@@ -14,9 +14,10 @@ interface ColumnCellProps {
   column: Column
   item: Item
   onChange: (columnId: string, value: any) => void
+  groupColor?: string
 }
 
-export default function ColumnCell({ column, item, onChange }: ColumnCellProps) {
+export default function ColumnCell({ column, item, onChange, groupColor }: ColumnCellProps) {
   const value = item.columnValues?.[column.id]
 
   switch (column.type) {
@@ -72,7 +73,7 @@ export default function ColumnCell({ column, item, onChange }: ColumnCellProps) 
       return <FileCell value={value} onChange={(v) => onChange(column.id, v)} />
 
     case 'TIMELINE':
-      return <TimelineCell value={value} onChange={(v) => onChange(column.id, v)} />
+      return <TimelineCell value={value} onChange={(v) => onChange(column.id, v)} groupColor={groupColor} />
 
     case 'RATING': {
       const rating = Number(value ?? 0)
