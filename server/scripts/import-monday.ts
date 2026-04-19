@@ -35,6 +35,32 @@ type MondayColumn = { id: string; title: string; type: string; settings?: any };
 type MondayGroup = { id: string; title: string };
 type MondayItem = { id: string; name: string; created_at: string; updated_at: string; column_values: Record<string, any> };
 
+// Columns that exist in the Monday board but shouldn't make it into Taskr.
+const DEAD_COLUMN_IDS = new Set([
+  'numeric_mkzmqmed', // Producto (numbers)
+  'text_mm1kenk5',    // Producto (text duplicate)
+  'text_mkzmfvrn',    // Subproducto
+  'text_mkzmjww7',    // Estación
+  'numeric_mkznb282', // Números 1
+]);
+
+// The imported Monday board mixes brand / status / HR labels into the `status` and `estado`
+// columns. We split them here into a clean trio: Marca (brands), Estado (real statuses), and a
+// new Tipo de tarea column that carries the HR labels (Vacaciones / Guardias / etc).
+const HR_LABELS = new Set([
+  'Vacaciones', 'Guardia', 'Guardias', 'Compensa', 'Bajas', 'International', 'Cambio horario',
+]);
+// Canonical HR label set used in the new Tipo de tarea column.
+const TIPO_DE_TAREA_LABELS = [
+  { label: 'Vacaciones',     hex: '#fdab3d' },
+  { label: 'Guardias',       hex: '#7f5347' },
+  { label: 'Compensa',       hex: '#faa1f1' },
+  { label: 'Bajas',          hex: '#ff7575' },
+  { label: 'International',  hex: '#9d99b9' },
+  { label: 'Cambio horario', hex: '#579bfc' },
+];
+const TIPO_COL_SYNTHETIC_ID = '__tipo_de_tarea__';
+
 const TYPE_MAP: Record<string, ColumnType | null> = {
   name: null,
   subtasks: null,
@@ -164,27 +190,51 @@ async function main() {
   let colPos = 0;
   for (const mc of board.columns) {
     mondayColIdToDef.set(mc.id, mc);
+    if (DEAD_COLUMN_IDS.has(mc.id)) continue;
     const taskrType = TYPE_MAP[mc.type];
     if (!taskrType) continue;
 
     let settings: any = {};
+    let title = mc.title;
     if (mc.type === 'status') {
-      settings = { labels: (mc.settings?.labels ?? []).map((l: any, i: number) => ({
+      // Strip HR labels from Marca + Estado — they move to the new Tipo de tarea column.
+      const labels = (mc.settings?.labels ?? []).filter((l: any) => !HR_LABELS.has(l.label));
+      settings = { labels: labels.map((l: any, i: number) => ({
         id: l.id,
         label: l.label,
         color: l.hex ?? '#c4c4c4',
         index: i,
         is_done: !!l.is_done,
       })) };
+      if (mc.id === 'status') title = 'Marca';
     } else if (mc.type === 'dropdown') {
       settings = { labels: mc.settings?.labels ?? [] };
     }
 
     const col = await prisma.column.create({
-      data: { boardId: newBoard.id, title: mc.title, type: taskrType, settings, position: colPos++ },
+      data: { boardId: newBoard.id, title, type: taskrType, settings, position: colPos++ },
     });
     mondayColIdToTaskrId.set(mc.id, col.id);
   }
+
+  // Synthesize a Tipo de tarea STATUS column — carries HR labels split out of Marca/Estado.
+  const tipoCol = await prisma.column.create({
+    data: {
+      boardId: newBoard.id,
+      title: 'Tipo de tarea',
+      type: ColumnType.STATUS,
+      settings: { labels: TIPO_DE_TAREA_LABELS.map((l, i) => ({
+        id: i, label: l.label, color: l.hex, index: i, is_done: false,
+      })) },
+      position: colPos++,
+    },
+  });
+  mondayColIdToTaskrId.set(TIPO_COL_SYNTHETIC_ID, tipoCol.id);
+  const tipoLabelToIndex = new Map<string, number>();
+  TIPO_DE_TAREA_LABELS.forEach((l, i) => {
+    tipoLabelToIndex.set(l.label, i);
+    if (l.label === 'Guardias') tipoLabelToIndex.set('Guardia', i);
+  });
   console.log(`Created ${mondayColIdToTaskrId.size} columns`);
 
   // --- Groups ---
@@ -239,8 +289,15 @@ async function main() {
         }
         case 'status': {
           const label = String(rawValue);
+          if (HR_LABELS.has(label)) {
+            // HR label — route to the synthesized Tipo de tarea column, skip original.
+            const tipoColId = mondayColIdToTaskrId.get(TIPO_COL_SYNTHETIC_ID);
+            const tipoIdx = tipoLabelToIndex.get(label);
+            if (tipoColId && tipoIdx != null) columnValues[tipoColId] = tipoIdx;
+            break;
+          }
           const idx = (colDef.settings?.labels ?? []).findIndex((l: any) => l.label === label);
-          columnValues[taskrColId] = idx >= 0 ? idx : 0;
+          if (idx >= 0) columnValues[taskrColId] = idx;
           break;
         }
         case 'dropdown': {

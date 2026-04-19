@@ -3,7 +3,7 @@ import type { Board, Column, Group, Item } from '../../lib/types'
 import type { SortState } from './ColumnHeader'
 import GroupRow from './GroupRow'
 import { useBoardStore } from '../../stores/boardStore'
-import { NAME_COL_WIDTH, widthForColumn } from './columnWidth'
+import { NAME_COL_WIDTH, UPDATES_COL_WIDTH, widthForColumn } from './columnWidth'
 
 interface BoardViewProps {
   board: Board
@@ -44,7 +44,7 @@ export default function BoardView({ board }: BoardViewProps) {
   const [sort, setSort] = useState<SortState | null>(null)
 
   const colWidths = useMemo(() => board.columns.map(widthForColumn), [board.columns])
-  const totalWidth = NAME_COL_WIDTH + colWidths.reduce((a, b) => a + b, 0)
+  const totalWidth = NAME_COL_WIDTH + UPDATES_COL_WIDTH + colWidths.reduce((a, b) => a + b, 0)
 
   const groupsSorted: Group[] = useMemo(() => {
     if (!sort) return board.groups

@@ -33,5 +33,6 @@ export const MONDAY_COLORS: Record<string, string> = {
 
 export function colorHex(name: string | undefined, fallback = '#C4C4C4'): string {
   if (!name) return fallback
+  if (/^#[0-9a-f]{3,8}$/i.test(name)) return name
   return MONDAY_COLORS[name] ?? fallback
 }

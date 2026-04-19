@@ -1,6 +1,7 @@
 import type { Column } from '../../lib/types'
 
-export const NAME_COL_WIDTH = 360
+export const NAME_COL_WIDTH = 340
+export const UPDATES_COL_WIDTH = 56
 
 export function widthForColumn(col: Column): number {
   switch (col.type) {

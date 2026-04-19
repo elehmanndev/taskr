@@ -31,24 +31,24 @@
   }
 
   :root[data-theme='light'] {
-    --app-bg: #f6f7fb;
+    --app-bg: #eaecf4;
     --surface: #ffffff;
     --surface-raised: #ffffff;
-    --surface-sunken: #eef0f6;
-    --surface-hover: #f0f2f8;
-    --border: #e6e8ef;
-    --border-strong: #c3c6d4;
-    --text-primary: #1f2338;
-    --text-secondary: #5a607a;
-    --text-muted: #8b8fa8;
+    --surface-sunken: #e3e6f0;
+    --surface-hover: #edeff6;
+    --border: #d0d4e0;
+    --border-strong: #a7adbf;
+    --text-primary: #14172a;
+    --text-secondary: #3a4058;
+    --text-muted: #6b7089;
     --text-on-accent: #ffffff;
     --accent: #0073ea;
     --accent-hover: #0060c2;
     --accent-soft: #cce5ff;
-    --danger: #e2445c;
-    --success: #00c875;
-    --warning: #fdab3d;
-    --shadow-card: 0 1px 2px rgba(24, 27, 52, 0.06), 0 4px 12px rgba(24, 27, 52, 0.06);
+    --danger: #d72c4a;
+    --success: #00a864;
+    --warning: #e69529;
+    --shadow-card: 0 1px 2px rgba(24, 27, 52, 0.08), 0 6px 18px rgba(24, 27, 52, 0.08);
   }
 
   :root[data-theme='black'] {

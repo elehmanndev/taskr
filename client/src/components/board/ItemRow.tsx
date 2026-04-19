@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import type { Column, Item } from '../../lib/types'
 import ColumnCell from '../columns/ColumnCell'
 import { useBoardStore } from '../../stores/boardStore'
+import { UPDATES_COL_WIDTH } from './columnWidth'
 
 interface ItemRowProps {
   item: Item
@@ -36,6 +37,8 @@ export default function ItemRow({ item, columns, colWidths, nameWidth, isLast }:
     updateItem(item.id, { columnValues }).catch(() => {})
   }
 
+  const commentCount = item._count?.comments ?? 0
+
   return (
     <div
       className={`flex border-b border-border bg-surface hover:bg-surface-hover group ${isLast ? 'border-b-0' : ''}`}
@@ -67,23 +70,32 @@ export default function ItemRow({ item, columns, colWidths, nameWidth, isLast }:
           </button>
         )}
         <button
-          className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-full text-text-muted hover:text-accent hover:bg-surface"
-          title="Write an update"
-        >
-          <span className="text-base leading-none">💬</span>
-        </button>
-        {item._count?.comments ? (
-          <span className="text-xs text-text-secondary px-1" title={`${item._count.comments} comments`}>
-            {item._count.comments}
-          </span>
-        ) : null}
-        <button
           onClick={() => {
             if (confirm('Delete this item?')) deleteItem(item.id).catch(() => {})
           }}
-          className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center text-text-muted hover:text-danger"
+          className="opacity-0 group-hover:opacity-100 w-7 h-7 mr-1 flex items-center justify-center text-text-muted hover:text-danger"
           title="Delete item"
         >×</button>
+      </div>
+
+      {/* Updates cell */}
+      <div
+        className="shrink-0 border-r border-border flex items-center justify-center"
+        style={{ width: UPDATES_COL_WIDTH, height: ROW_HEIGHT }}
+      >
+        <button
+          className="relative w-7 h-7 flex items-center justify-center rounded-full text-text-muted hover:text-accent hover:bg-surface-hover"
+          title={commentCount ? `${commentCount} updates — click to add` : 'Write an update'}
+        >
+          <span className="text-base leading-none">💬</span>
+          {commentCount > 0 && (
+            <span
+              className="absolute -top-0.5 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-accent text-[10px] font-semibold text-text-on-accent flex items-center justify-center"
+            >
+              {commentCount > 99 ? '99+' : commentCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {columns.map((col, i) => (

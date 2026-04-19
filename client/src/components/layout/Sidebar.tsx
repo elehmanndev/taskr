@@ -55,9 +55,9 @@ export default function Sidebar() {
     <aside
       className={`bg-surface border-r border-border flex flex-col shrink-0 transition-[width] duration-150 ${collapsed ? 'w-14' : 'w-60'}`}
     >
-      <div className="h-10 flex items-center justify-between px-2 border-b border-border">
+      <div className="h-10 flex items-center justify-between px-3 border-b border-border">
         {!collapsed && (
-          <Link to="/dashboard" className="text-xs font-semibold uppercase text-text-secondary tracking-wide pl-1">
+          <Link to="/dashboard" className="text-xs font-semibold uppercase text-text-secondary tracking-wide">
             Boards
           </Link>
         )}
@@ -71,7 +71,7 @@ export default function Sidebar() {
       </div>
 
       {!collapsed && (
-        <div className="px-2 pt-2 pb-1 flex justify-between items-center">
+        <div className="px-3 pt-2 pb-1 flex justify-between items-center">
           <span className="text-[10px] uppercase tracking-wider text-text-secondary">All boards</span>
           <button
             onClick={() => setModalOpen(true)}
@@ -81,7 +81,7 @@ export default function Sidebar() {
         </div>
       )}
 
-      <nav className="flex-1 overflow-y-auto scrollbar-thin px-2 pb-3">
+      <nav className="flex-1 overflow-y-auto scrollbar-thin px-2.5 pb-3">
         {loading && !collapsed && <div className="px-2 py-1 text-xs text-text-muted">Loading…</div>}
         {!loading && boards.length === 0 && !collapsed && (
           <div className="px-2 py-1 text-xs text-text-muted">No boards yet</div>
