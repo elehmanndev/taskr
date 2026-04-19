@@ -2,15 +2,15 @@
  * Imports a one-time dump of Monday.com data (users + MKT VPT board) into Taskr.
  *
  * Expects these files in ./monday-dump/ (relative to this script):
- *   - users.json             Array of Monday users
- *   - board.json             Board schema (columns with settings, groups)
- *   - items-page-1.json      Items from the Social (top) group
- *   - items-vacaciones.json  estado=Vacaciones → Vacaciones/compensaciones group
- *   - items-compensa.json    estado=Compensa   → same bucket as vacaciones
- *   - items-guardia.json     estado=Guardia    → Guardias finde group
- *   - items-bajas.json       estado=Bajas      → Bajas group
+ *   - users.json       Array of Monday users
+ *   - board.json       Board schema (columns with settings, groups)
+ *   - items-all.json   All future items fetched from Monday (date4 > today)
  *
- * See SOURCE_TO_MONDAY_GROUP below for the file → target group mapping.
+ * Items are routed to groups based on the "estado" column value:
+ *   Vacaciones/Compensa → Vacaciones, compensaciones group
+ *   Guardia             → Guardias finde group
+ *   Bajas               → Bajas group
+ *   Everything else     → Social (top group, default)
  *
  * Run inside the server container:
  *   docker compose exec server node scripts/import-monday.js
@@ -27,6 +27,7 @@ const prisma = new PrismaClient();
 
 const ORG_SLUG = process.env.ORG_SLUG ?? 'viajesparati';
 const IMPORTED_BOARD_NAME = 'MKT VPT (imported)';
+const FILTER_FROM_DATE = process.env.FILTER_FROM_DATE ?? new Date().toISOString().slice(0, 10); // only import items with date4 >= this date (default: today)
 const DUMP_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'monday-dump');
 
 type MondayUser = { id: string; name: string; email: string; avatarUrl?: string; title?: string; phone?: string; timezone?: string; location?: string };
@@ -60,41 +61,39 @@ function readJson<T>(file: string): T {
   return JSON.parse(fs.readFileSync(path.join(DUMP_DIR, file), 'utf8'));
 }
 
-// Source file → Monday group ID. The import script resolves these to Taskr group IDs after groups are created.
-const SOURCE_TO_MONDAY_GROUP: Record<string, string> = {
-  'items-page-1.json':     '1695378509_hoja_de_c_lculo_sin', // Social (top group)
-  'items-vacaciones.json': 'grupo_nuevo92850',               // Vacaciones, compensaciones
-  'items-compensa.json':   'grupo_nuevo92850',               // same bucket
-  'items-guardia.json':    'grupo_nuevo56127',               // Guardias finde
-  'items-bajas.json':      'grupo_nuevo__1',                 // Bajas
-  'items-newsletter.json': 'grupo_nuevo75562',               // Newsletter
-  'items-sms.json':        'grupo_nuevo62885',               // SMS
-  'items-push.json':       'grupo_nuevo25234',               // Push
-  'items-blog.json':       'grupo_nuevo3251',                // Blog
-  'items-reuniones.json':  'grupo_nuevo23254',               // Reuniones
-  'items-web.json':        'grupo_nuevo77425',               // Web
-  'items-branding.json':   'grupo_nuevo',                    // Branding
-  'items-paid.json':       'grupo_nuevo19497',               // Paid
-};
+function getMondayGroupId(item: MondayItem): string {
+  const cv = item.column_values;
+  const marca = cv['status'] != null ? String(cv['status']).trim() : '';
+  const name = item.name.toLowerCase();
+
+  // HR groups — routed by Marca (status) column
+  if (marca === 'Vacaciones' || marca === 'Compensa') return 'grupo_nuevo92850';
+  if (marca === 'Guardias') return 'grupo_nuevo56127';
+  if (marca === 'Bajas') return 'grupo_nuevo__1';
+
+  // Paid — MetaAds column populated is the reliable signal
+  if (cv['multiple_person_mknzxxsz'] != null) return 'grupo_nuevo19497';
+
+  // Content channels — detected from item name keywords
+  if (name.includes('newsletter')) return 'grupo_nuevo75562';
+  if (name.includes('sms')) return 'grupo_nuevo62885';
+  if (name.includes('push')) return 'grupo_nuevo25234';
+  if (name.includes('blog')) return 'grupo_nuevo3251';
+  if (name.includes('reunión') || name.includes('reunion')) return 'grupo_nuevo23254';
+  if (name.includes('banner')) return 'grupo_nuevo77425'; // Web (banners without MetaAds = web banners)
+
+  return '1695378509_hoja_de_c_lculo_sin'; // Social (default)
+}
 
 async function main() {
   const users = readJson<MondayUser[]>('users.json');
   const board = readJson<{ name: string; columns: MondayColumn[]; groups: MondayGroup[]; topGroupId: string }>('board.json');
 
-  // Load every configured source file; tag each item with its target Monday group ID.
-  const tagged: Array<{ item: MondayItem; mondayGroupId: string }> = [];
-  for (const [file, mondayGroupId] of Object.entries(SOURCE_TO_MONDAY_GROUP)) {
-    const filePath = path.join(DUMP_DIR, file);
-    if (!fs.existsSync(filePath)) {
-      console.warn(`Skipping missing ${file}`);
-      continue;
-    }
-    const { items: pageItems } = readJson<{ items: MondayItem[] }>(file);
-    for (const item of pageItems) tagged.push({ item, mondayGroupId });
-  }
-  // De-dupe by Monday item ID (status-filtered dumps may overlap — e.g. compensa-flagged rows also returned under estado=2).
-  const seen = new Set<string>();
-  const items = tagged.filter(t => (seen.has(t.item.id) ? false : (seen.add(t.item.id), true)));
+  const { items: allMondayItems } = readJson<{ items: Array<MondayItem & { mondayGroupId?: string }> }>('items-all.json');
+  const items: Array<{ item: MondayItem; mondayGroupId: string }> = allMondayItems.map(item => ({
+    item,
+    mondayGroupId: item.mondayGroupId ?? getMondayGroupId(item),
+  }));
 
   const org = await prisma.org.findUnique({ where: { slug: ORG_SLUG } });
   if (!org) throw new Error(`Org "${ORG_SLUG}" not found. Create it first.`);
@@ -205,7 +204,13 @@ async function main() {
 
   let itemPos = 0;
   let assigneeCount = 0;
+  let skipped = 0;
   for (const { item: mi, mondayGroupId } of items) {
+    // Skip items whose date4 is before the filter date (or have no date4 at all)
+    const itemDate = mi.column_values['date4'];
+    const dateStr = itemDate ? String(itemDate).slice(0, 10) : null;
+    if (dateStr && dateStr < FILTER_FROM_DATE) { skipped++; continue; } // skip past-dated; include no-date (timeline) items
+
     const taskrGroupId = mondayGroupIdToTaskrId.get(mondayGroupId);
     if (!taskrGroupId) {
       console.warn(`Skipping item ${mi.id} — no group mapping for ${mondayGroupId}`);
@@ -302,7 +307,7 @@ async function main() {
     }
   }
 
-  console.log(`Created ${items.length} items with ${assigneeCount} assignee rows`);
+  console.log(`Created ${items.length - skipped} items (skipped ${skipped} with no date or date before ${FILTER_FROM_DATE}) with ${assigneeCount} assignee rows`);
   console.log(`Done. Board: ${IMPORTED_BOARD_NAME} (${newBoard.id})`);
 }
 

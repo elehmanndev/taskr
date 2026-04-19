@@ -18,7 +18,7 @@ export default function ColumnHeader({ column, width, sort, onToggleSort }: Colu
     <button
       type="button"
       onClick={() => onToggleSort(column.id)}
-      className="shrink-0 h-10 border-r border-border bg-surface-sunken flex items-center justify-between px-3 text-[11px] font-semibold text-text-secondary uppercase tracking-wider hover:bg-surface-hover group"
+      className="shrink-0 h-10 border-r border-border bg-surface-sunken flex items-center justify-between px-3 text-[11px] font-semibold text-text-primary uppercase tracking-wider hover:bg-surface-hover group"
       style={{ width }}
       title={column.title}
     >

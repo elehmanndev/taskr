@@ -6,13 +6,14 @@ import { useBoardStore } from '../../stores/boardStore'
 interface ItemRowProps {
   item: Item
   columns: Column[]
+  colWidths: number[]
   nameWidth: number
-  colWidth: number
+  isLast?: boolean
 }
 
-const ROW_HEIGHT = 36
+const ROW_HEIGHT = 44
 
-export default function ItemRow({ item, columns, nameWidth, colWidth }: ItemRowProps) {
+export default function ItemRow({ item, columns, colWidths, nameWidth, isLast }: ItemRowProps) {
   const { updateItem, deleteItem } = useBoardStore()
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(item.name)
@@ -37,7 +38,7 @@ export default function ItemRow({ item, columns, nameWidth, colWidth }: ItemRowP
 
   return (
     <div
-      className="flex border-b border-border last:border-b-0 bg-surface hover:bg-surface-hover group"
+      className={`flex border-b border-border bg-surface hover:bg-surface-hover group ${isLast ? 'border-b-0' : ''}`}
       style={{ height: ROW_HEIGHT }}
     >
       {/* Name cell */}
@@ -72,7 +73,7 @@ export default function ItemRow({ item, columns, nameWidth, colWidth }: ItemRowP
           <span className="text-base leading-none">💬</span>
         </button>
         {item._count?.comments ? (
-          <span className="text-xs text-text-muted px-1" title={`${item._count.comments} comments`}>
+          <span className="text-xs text-text-secondary px-1" title={`${item._count.comments} comments`}>
             {item._count.comments}
           </span>
         ) : null}
@@ -85,11 +86,11 @@ export default function ItemRow({ item, columns, nameWidth, colWidth }: ItemRowP
         >×</button>
       </div>
 
-      {columns.map((col) => (
+      {columns.map((col, i) => (
         <div
           key={col.id}
           className="shrink-0 border-r border-border flex items-stretch"
-          style={{ width: colWidth, height: ROW_HEIGHT }}
+          style={{ width: colWidths[i], height: ROW_HEIGHT }}
         >
           <ColumnCell column={col} item={item} onChange={changeColumnValue} />
         </div>

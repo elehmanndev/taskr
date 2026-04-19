@@ -5,6 +5,8 @@ interface PeoplePickerProps {
   assignees: ItemAssignee[]
 }
 
+const MAX_VISIBLE = 2
+
 export default function PeoplePicker({ assignees }: PeoplePickerProps) {
   if (!assignees || assignees.length === 0) {
     return (
@@ -13,9 +15,15 @@ export default function PeoplePicker({ assignees }: PeoplePickerProps) {
       </div>
     )
   }
+  const visible = assignees.slice(0, MAX_VISIBLE)
+  const overflow = assignees.length - visible.length
+  const overflowTitle = overflow > 0
+    ? assignees.slice(MAX_VISIBLE).map((a) => a.user.name).join(', ')
+    : undefined
+
   return (
     <div className="w-full h-full flex items-center justify-center gap-0.5 px-1">
-      {assignees.slice(0, 3).map((a) => (
+      {visible.map((a) => (
         <ProfilePopover
           key={a.id}
           userId={a.userId}
@@ -24,8 +32,13 @@ export default function PeoplePicker({ assignees }: PeoplePickerProps) {
           size="sm"
         />
       ))}
-      {assignees.length > 3 && (
-        <span className="text-xs text-text-secondary ml-1">+{assignees.length - 3}</span>
+      {overflow > 0 && (
+        <span
+          title={overflowTitle}
+          className="w-6 h-6 rounded-full bg-surface-sunken border border-border-strong flex items-center justify-center text-[10px] font-semibold text-text-secondary"
+        >
+          +{overflow}
+        </span>
       )}
     </div>
   )

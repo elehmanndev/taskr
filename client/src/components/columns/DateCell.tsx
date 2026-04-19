@@ -10,7 +10,7 @@ function formatDisplay(iso?: string | null) {
   if (!iso) return ''
   const d = new Date(iso)
   if (isNaN(d.getTime())) return iso
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '')
 }
 
 export default function DateCell({ value, onChange, readOnly }: DateCellProps) {

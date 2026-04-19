@@ -57,7 +57,7 @@ export default function Sidebar() {
     >
       <div className="h-10 flex items-center justify-between px-2 border-b border-border">
         {!collapsed && (
-          <Link to="/dashboard" className="text-xs font-semibold uppercase text-text-muted tracking-wide pl-1">
+          <Link to="/dashboard" className="text-xs font-semibold uppercase text-text-secondary tracking-wide pl-1">
             Boards
           </Link>
         )}
@@ -72,7 +72,7 @@ export default function Sidebar() {
 
       {!collapsed && (
         <div className="px-2 pt-2 pb-1 flex justify-between items-center">
-          <span className="text-[10px] uppercase tracking-wider text-text-muted">All boards</span>
+          <span className="text-[10px] uppercase tracking-wider text-text-secondary">All boards</span>
           <button
             onClick={() => setModalOpen(true)}
             className="w-6 h-6 rounded flex items-center justify-center text-text-secondary hover:bg-surface-hover hover:text-accent text-lg leading-none"

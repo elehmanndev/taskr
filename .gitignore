@@ -7,3 +7,4 @@ server/prisma/migrations/
 .claude/
 LOCAL.md
 server/scripts/monday-dump/
+MONDAY.md

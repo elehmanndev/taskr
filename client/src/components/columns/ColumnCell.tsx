@@ -8,6 +8,7 @@ import EmailCell from './EmailCell'
 import PhoneCell from './PhoneCell'
 import LinkCell from './LinkCell'
 import FileCell from './FileCell'
+import TimelineCell from './TimelineCell'
 
 interface ColumnCellProps {
   column: Column
@@ -70,16 +71,8 @@ export default function ColumnCell({ column, item, onChange }: ColumnCellProps) 
     case 'FILE':
       return <FileCell value={value} onChange={(v) => onChange(column.id, v)} />
 
-    case 'TIMELINE': {
-      const from = value?.from ?? ''
-      const to = value?.to ?? ''
-      const display = from || to ? `${from} → ${to}` : ''
-      return (
-        <div className="w-full h-full text-xs text-text-primary px-2 flex items-center truncate">
-          {display || <span className="text-text-muted">—</span>}
-        </div>
-      )
-    }
+    case 'TIMELINE':
+      return <TimelineCell value={value} onChange={(v) => onChange(column.id, v)} />
 
     case 'RATING': {
       const rating = Number(value ?? 0)

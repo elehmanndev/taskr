@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'react'
 import type { Board, Column, Group, Item } from '../../lib/types'
-import ColumnHeader, { type SortState } from './ColumnHeader'
+import type { SortState } from './ColumnHeader'
 import GroupRow from './GroupRow'
 import { useBoardStore } from '../../stores/boardStore'
-
-const NAME_COL_WIDTH = 360
-const COL_WIDTH = 150
+import { NAME_COL_WIDTH, widthForColumn } from './columnWidth'
 
 interface BoardViewProps {
   board: Board
@@ -45,7 +43,8 @@ export default function BoardView({ board }: BoardViewProps) {
   const [newGroupName, setNewGroupName] = useState('')
   const [sort, setSort] = useState<SortState | null>(null)
 
-  const totalWidth = NAME_COL_WIDTH + board.columns.length * COL_WIDTH
+  const colWidths = useMemo(() => board.columns.map(widthForColumn), [board.columns])
+  const totalWidth = NAME_COL_WIDTH + colWidths.reduce((a, b) => a + b, 0)
 
   const groupsSorted: Group[] = useMemo(() => {
     if (!sort) return board.groups
@@ -74,39 +73,20 @@ export default function BoardView({ board }: BoardViewProps) {
   return (
     <div className="p-6 overflow-auto h-full scrollbar-thin bg-app">
       <div style={{ minWidth: totalWidth }}>
-        {/* Column headers row */}
-        <div className="flex sticky top-0 z-20 bg-surface-sunken border-b border-border rounded-t-md overflow-hidden">
-          <div
-            className="shrink-0 h-10 border-r border-border bg-surface-sunken flex items-center px-4 text-[11px] font-semibold text-text-secondary uppercase tracking-wider"
-            style={{ width: NAME_COL_WIDTH }}
-          >
-            Item
-          </div>
-          {board.columns.map((col) => (
-            <ColumnHeader
-              key={col.id}
-              column={col}
-              width={COL_WIDTH}
-              sort={sort}
-              onToggleSort={toggleSort}
-            />
-          ))}
-        </div>
-
-        {/* Groups */}
-        <div className="pt-4 space-y-6">
+        <div className="space-y-6">
           {groupsSorted.map((group) => (
             <GroupRow
               key={group.id}
               group={group}
               columns={board.columns}
+              colWidths={colWidths}
               nameWidth={NAME_COL_WIDTH}
-              colWidth={COL_WIDTH}
               totalWidth={totalWidth}
+              sort={sort}
+              onToggleSort={toggleSort}
             />
           ))}
 
-          {/* Add group */}
           <div className="mt-2">
             <input
               value={newGroupName}

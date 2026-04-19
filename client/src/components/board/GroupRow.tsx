@@ -1,17 +1,20 @@
 import { useState } from 'react'
 import type { Column, Group } from '../../lib/types'
 import ItemRow from './ItemRow'
+import ColumnHeader, { type SortState } from './ColumnHeader'
 import { useBoardStore } from '../../stores/boardStore'
 
 interface GroupRowProps {
   group: Group
   columns: Column[]
+  colWidths: number[]
   nameWidth: number
-  colWidth: number
   totalWidth: number
+  sort: SortState | null
+  onToggleSort: (columnId: string) => void
 }
 
-export default function GroupRow({ group, columns, nameWidth, colWidth, totalWidth }: GroupRowProps) {
+export default function GroupRow({ group, columns, colWidths, nameWidth, totalWidth, sort, onToggleSort }: GroupRowProps) {
   const { createItem, patchGroup } = useBoardStore()
   const [newItemName, setNewItemName] = useState('')
   const [creating, setCreating] = useState(false)
@@ -46,7 +49,7 @@ export default function GroupRow({ group, columns, nameWidth, colWidth, totalWid
 
   return (
     <div style={{ minWidth: totalWidth }}>
-      {/* Group header bar */}
+      {/* Group name bar */}
       <div className="flex items-center gap-2 h-9 pl-1 mb-1">
         <button
           onClick={toggleCollapse}
@@ -78,34 +81,54 @@ export default function GroupRow({ group, columns, nameWidth, colWidth, totalWid
             {group.name}
           </button>
         )}
-        <span className="text-xs text-text-muted font-normal">
+        <span className="text-xs text-text-secondary font-normal">
           {group.items.length} item{group.items.length === 1 ? '' : 's'}
         </span>
       </div>
 
       {!group.collapsed && (
         <div
-          className="relative rounded-lg overflow-hidden border border-border bg-surface shadow-card"
+          className="relative rounded-lg border border-border bg-surface shadow-card"
           style={{ minWidth: totalWidth }}
         >
-          {/* Colored left bar runs full group height */}
+          {/* Colored left bar, rounded to match card corners */}
           <div
-            className="absolute left-0 top-0 bottom-0 w-1"
+            className="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg z-10"
             style={{ backgroundColor: color }}
           />
 
-          {group.items.map((item) => (
+          {/* Sticky column header — pinned to top of the group card while scrolling */}
+          <div className="flex sticky top-0 z-20 bg-surface-sunken border-b border-border rounded-t-lg overflow-hidden">
+            <div
+              className="shrink-0 h-10 border-r border-border bg-surface-sunken flex items-center px-4 text-[11px] font-semibold text-text-primary uppercase tracking-wider"
+              style={{ width: nameWidth }}
+            >
+              Item
+            </div>
+            {columns.map((col, i) => (
+              <ColumnHeader
+                key={col.id}
+                column={col}
+                width={colWidths[i]}
+                sort={sort}
+                onToggleSort={onToggleSort}
+              />
+            ))}
+          </div>
+
+          {group.items.map((item, idx) => (
             <ItemRow
               key={item.id}
               item={item}
               columns={columns}
+              colWidths={colWidths}
               nameWidth={nameWidth}
-              colWidth={colWidth}
+              isLast={idx === group.items.length - 1 && group.items.length > 0}
             />
           ))}
 
           {/* Add item row */}
-          <div className="flex border-t border-border hover:bg-surface-hover/40" style={{ minWidth: totalWidth }}>
+          <div className="flex border-t border-border hover:bg-surface-hover/40 rounded-b-lg overflow-hidden" style={{ minWidth: totalWidth }}>
             <div className="shrink-0 flex items-center pl-3" style={{ width: nameWidth }}>
               <input
                 value={newItemName}
@@ -113,11 +136,11 @@ export default function GroupRow({ group, columns, nameWidth, colWidth, totalWid
                 onKeyDown={(e) => { if (e.key === 'Enter') addItem() }}
                 placeholder="+ Add item"
                 disabled={creating}
-                className="flex-1 h-8 px-2 text-sm outline-none bg-transparent text-text-primary placeholder:text-text-muted"
+                className="flex-1 h-10 px-2 text-sm outline-none bg-transparent text-text-primary placeholder:text-text-muted"
               />
             </div>
-            {columns.map((col) => (
-              <div key={col.id} className="shrink-0 h-8 border-l border-border" style={{ width: colWidth }} />
+            {columns.map((col, i) => (
+              <div key={col.id} className="shrink-0 h-10 border-l border-border" style={{ width: colWidths[i] }} />
             ))}
           </div>
         </div>
