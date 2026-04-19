@@ -273,7 +273,18 @@ Scaffolding + core wiring is done and deployed. Biggest remaining gap is visual 
 - [x] **Board visual pass #1** (2026-04-19): column header band (uppercase, darker bg, distinct border), group-as-card (elevated rounded surface with full-height colored left bar + chevron + item count), tighter 36px rows, status pills fill cells (bold uppercase white), hover-revealed quick-update icon (UI only, no composer yet).
 - [x] **Column sort from header** (2026-04-19): click a column header to cycle asc → desc → off; sort lives in BoardView local state, not yet persisted.
 - [x] **Collapsible sidebar** (2026-04-19): toggle button in sidebar header, width persisted to localStorage.
-- [ ] **Visual pass #2 — needs in-browser review before continuing.** Build + deploy with `docker compose build --no-cache client && docker compose up -d client` on Unraid, then iterate on spacing/contrast/colors from the live app. Monday status-pill hex values were never captured (Chrome MCP scrape attempt was aborted) — grab them from devtools if anything looks off.
+- [x] **Visual pass #2** (2026-04-19, commits `9c733de` + `20e9063`): per-group sticky column header (replaces the single global sticky), per-column widths (`client/src/components/board/columnWidth.ts` — PEOPLE 96, STATUS 130, TIMELINE 180, CHECKBOX/RATING 80, LONG_TEXT 220, default 150), `PeoplePicker` +N overflow chip (2 avatars visible), 44px rows, new `TimelineCell` with `5 abr – 11 abr` (es-ES, no year) + click-to-open range popover, `DateCell` es-ES short format, Night/Black contrast bump (text tokens brightened + column headers and sidebar section labels promoted), colored group left bar constrained to items region (top:40 bottom:40) so it doesn't clash with rounded card corners.
+- [ ] **Visual pass #3 queue** (raised 2026-04-19 during live review — full detail in `project_ui_overhaul_plan.md`):
+  - Sticky scope too tight — fold group-name bar into the card so the sticky covers the whole group, not just the card region.
+  - Light theme unreadable — sidebar "BOARDS"/"ALL BOARDS" labels clipped on the left; overall contrast too faint.
+  - Comments → dedicated narrow column — move the hover speech-bubble + delete-X out of the item-name cell into their own cell (Monday's updates-column pattern).
+  - Drop dead columns from the imported board backend: PRODUCTO (×2), SUBPRODUCTO, ESTACIÓN (and possibly NÚMEROS 1 — Eric said "four", ask which stays). Update `server/scripts/import-monday.ts` and delete from DB.
+  - `Histórico` / archived group muted styling (low opacity, gray accent, collapsed-by-default).
+  - **Brand column** (part of ESTADO split) with per-brand hex palette — AMI INT amber, DJT dark teal, VPT purple, AMI green, **JUM orange/peach, BTR beige/tan** (swapped from Eric's first pass), AADIA periwinkle, SKI bright blue, SKI INT cyan, BUC pink/magenta.
+  - CRONOGRAMA rendered as colored pill with progress-bar fill (% elapsed between from→to) + hover tooltip showing total day count.
+  - Collapsed groups render as a compact card (no column row, no add-item row) — click anywhere to expand.
+  - Pull real status-pill colors from Monday via `monday-api-mcp` (currently falls back to gray `#C4C4C4`).
+  - ESTADO column restructure → split into Estado / Brand / Tipo de tarea / Etiquetas (requires migration of existing imported values).
 - [ ] Quick-update composer: icon exists on item-row hover, click is currently a no-op. Wire to open a popover that posts a Comment and fires notifications to everyone involved with the item.
 - [ ] **Board width management**: pin first N columns (sticky-left with shadow), auto-collapse columns with no values on visible items, "focus mode" (user-selected subset). Extend the existing "Ocultar" concept.
 - [ ] **View tabs** below the board title: table / calendar / custom filtered-table. Requires the `BoardView` server model from the Design & UX Direction section (not yet migrated).
