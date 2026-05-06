@@ -88,4 +88,41 @@ export async function authRoutes(app: FastifyInstance) {
       .clearCookie('token', { path: '/' })
       .send({ ok: true })
   })
+
+  // Dev-only: issue a JWT for a seeded test user without OAuth.
+  // Returns 404 in production so the route never exists there.
+  app.post('/dev-login', async (_, reply) => {
+    if (process.env.NODE_ENV === 'production') {
+      return reply.code(404).send({ error: 'Not found' })
+    }
+
+    const email = 'dev@taskr.local'
+    const user = await prisma.user.upsert({
+      where: { email },
+      create: { email, name: 'Dev User' },
+      update: {},
+    })
+
+    // Attach to the first org (if any) as OWNER for full access.
+    const org = await prisma.org.findFirst({ orderBy: { createdAt: 'asc' } })
+    if (org) {
+      await prisma.orgMember.upsert({
+        where: { orgId_userId: { orgId: org.id, userId: user.id } },
+        create: { orgId: org.id, userId: user.id, role: 'OWNER' },
+        update: { role: 'OWNER' },
+      })
+    }
+
+    const token = app.jwt.sign({ sub: user.id, email: user.email }, { expiresIn: '30d' })
+
+    reply
+      .setCookie('token', token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30,
+        path: '/',
+      })
+      .send({ user })
+  })
 }

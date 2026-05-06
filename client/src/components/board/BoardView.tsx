@@ -48,7 +48,10 @@ export default function BoardView({ board }: BoardViewProps) {
 
   const groupsSorted: Group[] = useMemo(() => {
     if (!sort) return board.groups
-    return board.groups.map((g) => ({ ...g, items: sortedItems(g.items, board.columns, sort) }))
+    return board.groups.map((g) => ({
+      ...g,
+      items: g.items ? sortedItems(g.items, board.columns, sort) : g.items,
+    }))
   }, [board.groups, board.columns, sort])
 
   const toggleSort = (columnId: string) => {
@@ -70,9 +73,11 @@ export default function BoardView({ board }: BoardViewProps) {
     }
   }
 
+  const anyExpanded = board.groups.some((g) => !g.collapsed)
+
   return (
     <div className="p-6 overflow-auto h-full scrollbar-thin bg-app">
-      <div style={{ minWidth: totalWidth }}>
+      <div style={anyExpanded ? { minWidth: totalWidth } : undefined}>
         <div>
           {groupsSorted.map((group) => (
             <GroupRow

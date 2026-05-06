@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { colorHex } from './colors'
+import { colorHex, darkenForContrast } from './colors'
 import type { StatusLabel } from '../../lib/types'
 
 interface StatusPillProps {
@@ -8,15 +8,6 @@ interface StatusPillProps {
   labels: StatusLabel[]
   onChange: (id: number | null) => void
   readOnly?: boolean
-}
-
-function idealTextColor(hex: string): string {
-  if (!/^#[0-9a-f]{6}$/i.test(hex)) return '#fff'
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  const L = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-  return L > 0.62 ? '#1f2340' : '#fff'
 }
 
 export default function StatusPill({ value, labels, onChange, readOnly }: StatusPillProps) {
@@ -50,46 +41,60 @@ export default function StatusPill({ value, labels, onChange, readOnly }: Status
   }, [open])
 
   const selected = labels.find((l) => l.id === value)
-  const bg = selected ? colorHex(selected.color) : 'transparent'
-  const fg = selected ? idealTextColor(bg) : 'var(--text-muted)'
+  const rawHex = selected ? colorHex(selected.color) : null
+  const pillBg = rawHex ? darkenForContrast(rawHex) : null
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full flex items-center justify-center px-2">
       <button
         ref={btnRef}
         disabled={readOnly}
         onClick={() => setOpen((o) => !o)}
-        className="w-full h-full flex items-center justify-center text-[11px] font-bold uppercase tracking-wide truncate transition-opacity hover:opacity-90"
-        style={{ backgroundColor: bg, color: fg }}
+        className="min-w-[75%] max-w-full px-3.5 py-1.5 rounded-full text-[11px] font-medium uppercase tracking-wide truncate text-center transition hover:opacity-90"
+        style={
+          pillBg
+            ? { backgroundColor: pillBg, color: '#ffffff' }
+            : { color: 'var(--text-muted)' }
+        }
       >
-        {selected?.label ?? ''}
+        {selected?.label ?? '—'}
       </button>
       {open && pos && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[100] bg-surface-raised border border-border rounded-md shadow-card py-1 p-1"
-          style={{ top: pos.top, left: pos.left, width: pos.width }}
+          className="fixed z-[100] rounded-2xl p-3 space-y-2 overflow-hidden"
+          style={{
+            top: pos.top,
+            left: pos.left,
+            width: Math.max(pos.width, 200),
+            backgroundColor: 'var(--popover-bg)',
+            border: '1px solid var(--popover-border)',
+            boxShadow: 'var(--popover-shadow)',
+          }}
         >
           {labels.map((l) => {
-            const hex = colorHex(l.color)
+            const hex = darkenForContrast(colorHex(l.color))
             return (
               <button
                 key={l.id}
                 onClick={() => { onChange(l.id); setOpen(false) }}
-                className="w-full text-left px-2 py-1.5 text-xs font-bold uppercase tracking-wide rounded mb-0.5 hover:opacity-90"
-                style={{ backgroundColor: hex, color: idealTextColor(hex) }}
+                className="w-full text-left px-4 py-2 text-[11px] font-medium uppercase tracking-wide rounded-full hover:opacity-90 text-white transition"
+                style={{ backgroundColor: hex }}
               >
                 {l.label}
               </button>
             )
           })}
           {selected && (
-            <button
-              onClick={() => { onChange(null); setOpen(false) }}
-              className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:bg-surface-hover border-t border-border mt-1 rounded-none"
-            >
-              Clear
-            </button>
+            <>
+              <div className="h-px mx-2" style={{ backgroundColor: 'rgba(255,255,255,0.10)' }} />
+              <button
+                onClick={() => { onChange(null); setOpen(false) }}
+                className="w-full text-left px-4 py-2 text-xs text-text-muted hover:text-text-primary hover:bg-white/5 rounded-lg transition"
+              >
+                Clear
+              </button>
+            </>
           )}
         </div>,
         document.body,

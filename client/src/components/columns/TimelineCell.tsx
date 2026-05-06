@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { darkenForContrast } from './colors'
 
 export interface TimelineValue {
   from?: string | null
@@ -133,16 +134,31 @@ export default function TimelineCell({ value, onChange, readOnly, groupColor }: 
         className="w-full h-full flex items-center justify-center px-2 hover:bg-surface-hover"
       >
         {progress ? (
-          <div
-            className="relative w-full h-6 rounded-full overflow-hidden flex items-center justify-center text-[11px] font-semibold truncate"
-            style={{ backgroundColor: `${barColor}33`, color: 'var(--text-primary)' }}
-          >
+          progress.status === 'upcoming' ? (
+            // Not started — outlined pill so it visibly differs from in-progress.
             <div
-              className="absolute inset-y-0 left-0"
-              style={{ width: `${progress.pct}%`, backgroundColor: `${barColor}99` }}
-            />
-            <span className="relative px-2 truncate">{label}</span>
-          </div>
+              className="relative min-w-[75%] max-w-full h-6 rounded-full flex items-center justify-center text-[11px] font-medium tracking-wide truncate"
+              style={{
+                border: `1.5px dashed ${darkenForContrast(barColor)}`,
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <span className="px-2 truncate">{label}</span>
+            </div>
+          ) : (
+            // Active or past — dark pill with bright progress fill from the left.
+            <div
+              className="relative min-w-[75%] max-w-full h-6 rounded-full overflow-hidden flex items-center justify-center text-[11px] font-medium tracking-wide truncate"
+              style={{ backgroundColor: darkenForContrast(barColor), color: '#ffffff' }}
+            >
+              <div
+                aria-hidden
+                className="absolute inset-y-0 left-0"
+                style={{ width: `${progress.pct}%`, backgroundColor: 'rgba(255,255,255,0.40)' }}
+              />
+              <span className="relative px-2 truncate">{label}</span>
+            </div>
+          )
         ) : (
           <span className="text-xs text-text-primary truncate">
             {label || <span className="text-text-muted">—</span>}
@@ -152,36 +168,64 @@ export default function TimelineCell({ value, onChange, readOnly, groupColor }: 
       {open && pos && createPortal(
         <div
           ref={popRef}
-          className="fixed z-[100] w-64 bg-surface-raised border border-border rounded-md shadow-card p-3 space-y-2"
-          style={{ top: pos.top, left: pos.left }}
+          className="fixed z-[100] w-72 rounded-2xl overflow-hidden p-4"
+          style={{
+            top: pos.top,
+            left: pos.left,
+            backgroundColor: 'var(--popover-bg)',
+            border: '1px solid var(--popover-border)',
+            boxShadow: 'var(--popover-shadow)',
+          }}
         >
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-            Desde
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="mt-1 w-full h-8 px-2 text-xs bg-surface border border-border rounded outline-none text-text-primary focus:border-accent"
-            />
-          </label>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-            Hasta
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="mt-1 w-full h-8 px-2 text-xs bg-surface border border-border rounded outline-none text-text-primary focus:border-accent"
-            />
-          </label>
-          <div className="flex justify-between pt-1">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted mb-3">
+            Cronograma
+          </div>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <label className="block">
+              <span className="text-[11px] font-medium text-text-secondary block mb-1.5">Desde</span>
+              <input
+                type="date"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                className="w-full h-9 px-2.5 text-sm rounded-lg outline-none transition focus:ring-2 focus:ring-accent/40"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  color: 'var(--text-primary)',
+                  colorScheme: 'dark',
+                }}
+              />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-text-secondary block mb-1.5">Hasta</span>
+              <input
+                type="date"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                className="w-full h-9 px-2.5 text-sm rounded-lg outline-none transition focus:ring-2 focus:ring-accent/40"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  color: 'var(--text-primary)',
+                  colorScheme: 'dark',
+                }}
+              />
+            </label>
+          </div>
+          <div className="flex items-center justify-between">
             <button
               onClick={clear}
-              className="text-xs text-text-muted hover:text-danger"
-            >Clear</button>
+              className="text-xs text-text-muted hover:text-danger transition"
+            >
+              Vaciar
+            </button>
             <button
               onClick={commit}
-              className="text-xs px-3 py-1 bg-accent text-text-on-accent rounded hover:bg-accent-hover"
-            >Done</button>
+              className="text-xs px-3.5 py-1.5 rounded-lg font-medium text-white hover:opacity-95 transition"
+              style={{ background: 'var(--brand-gradient)' }}
+            >
+              Aplicar
+            </button>
           </div>
         </div>,
         document.body,

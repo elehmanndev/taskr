@@ -88,14 +88,22 @@ export default function ItemRow({ item, columns, colWidths, nameWidth, isLast, g
       >
         <button
           onClick={() => setUpdatesOpen(true)}
-          className="relative w-7 h-7 flex items-center justify-center rounded-full text-text-muted hover:text-accent hover:bg-surface-hover"
-          title={commentCount ? `${commentCount} actualizaciones — clic para añadir` : 'Escribir una actualización'}
+          className={`relative w-8 h-8 flex items-center justify-center rounded-md transition hover:bg-surface-hover ${
+            commentCount > 0 ? 'text-accent' : 'text-text-muted hover:text-accent'
+          }`}
+          title={commentCount ? `${commentCount} actualizaciones — clic para abrir` : 'Escribir una actualización'}
         >
-          <span className="text-base leading-none">💬</span>
+          <svg viewBox="0 0 24 24" fill="none" className="w-[26px] h-[26px]">
+            <path
+              d="M18.5 4.5h-13a2 2 0 00-2 2v9a2 2 0 002 2h2.5L7 20.5l4.5-3h7a2 2 0 002-2v-9a2 2 0 00-2-2z"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </svg>
           {commentCount > 0 && (
-            <span
-              className="absolute -top-0.5 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-accent text-[10px] font-semibold text-text-on-accent flex items-center justify-center"
-            >
+            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold leading-none pb-[5px]">
               {commentCount > 99 ? '99+' : commentCount}
             </span>
           )}

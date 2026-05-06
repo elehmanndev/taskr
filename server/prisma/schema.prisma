@@ -204,7 +204,7 @@ model Group {
   name      String
   color     String   @default("#0073EA")
   position  Int      @default(0)
-  collapsed Boolean  @default(false)
+  collapsed Boolean  @default(true)
   createdAt DateTime @default(now())
 
   board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)

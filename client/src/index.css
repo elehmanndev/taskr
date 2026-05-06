@@ -10,7 +10,7 @@
 @layer base {
   :root,
   :root[data-theme='night'] {
-    --app-bg: #181b34;
+    --app-bg: #14162b;
     --surface: #1f2240;
     --surface-raised: #262a4a;
     --surface-sunken: #14162b;
@@ -28,48 +28,22 @@
     --success: #00c875;
     --warning: #fdab3d;
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.2);
-  }
-
-  :root[data-theme='light'] {
-    --app-bg: #eaecf4;
-    --surface: #ffffff;
-    --surface-raised: #ffffff;
-    --surface-sunken: #e3e6f0;
-    --surface-hover: #edeff6;
-    --border: #d0d4e0;
-    --border-strong: #a7adbf;
-    --text-primary: #14172a;
-    --text-secondary: #3a4058;
-    --text-muted: #6b7089;
-    --text-on-accent: #ffffff;
-    --accent: #0073ea;
-    --accent-hover: #0060c2;
-    --accent-soft: #cce5ff;
-    --danger: #d72c4a;
-    --success: #00a864;
-    --warning: #e69529;
-    --shadow-card: 0 1px 2px rgba(24, 27, 52, 0.08), 0 6px 18px rgba(24, 27, 52, 0.08);
-  }
-
-  :root[data-theme='black'] {
-    --app-bg: #000000;
-    --surface: #0a0a0c;
-    --surface-raised: #121216;
-    --surface-sunken: #000000;
-    --surface-hover: #1a1a20;
-    --border: #1f1f26;
-    --border-strong: #2e2e38;
-    --text-primary: #f5f5f8;
-    --text-secondary: #bfbfc9;
-    --text-muted: #8a8a95;
-    --text-on-accent: #ffffff;
-    --accent: #579bfc;
-    --accent-hover: #4789ef;
-    --accent-soft: #1a2540;
-    --danger: #e2445c;
-    --success: #00c875;
-    --warning: #fdab3d;
-    --shadow-card: 0 0 0 1px #1f1f26;
+    --auth-glow-1: rgba(87, 155, 252, 0.32);
+    --auth-glow-2: rgba(162, 93, 220, 0.28);
+    --auth-card-bg: rgba(31, 34, 64, 0.72);
+    --auth-card-border: rgba(255, 255, 255, 0.08);
+    --auth-card-highlight: rgba(255, 255, 255, 0.06);
+    --auth-dot: rgba(255, 255, 255, 0.04);
+    --surface-glass: rgba(31, 34, 64, 0.48);
+    --surface-glass-strong: #262a4a;
+    --popover-bg: #14162b;
+    --popover-border: rgba(255, 255, 255, 0.08);
+    --popover-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.65), 0 6px 16px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    --border-soft: rgba(255, 255, 255, 0.06);
+    --app-gradient:
+      radial-gradient(ellipse 60% 50% at 85% 15%, rgba(87, 155, 252, 0.14), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 15% 85%, rgba(162, 93, 220, 0.12), transparent 70%);
+    --brand-gradient: linear-gradient(135deg, var(--accent), #a25ddc);
   }
 
   html, body, #root {
@@ -79,6 +53,30 @@
     background-color: var(--app-bg);
     color: var(--text-primary);
     @apply antialiased font-sans;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: var(--app-gradient);
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: radial-gradient(var(--auth-dot) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 90%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 90%);
+    opacity: 0.6;
+  }
+  #root {
+    position: relative;
+    z-index: 1;
   }
 }
 

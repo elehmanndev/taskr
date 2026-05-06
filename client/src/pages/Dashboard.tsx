@@ -68,19 +68,35 @@ export default function Dashboard() {
           <Link
             key={b.id}
             to={`/board/${b.id}`}
-            className="block bg-surface rounded-lg border border-border p-4 hover:shadow-md hover:border-accent transition"
+            className="group relative block rounded-xl p-4 backdrop-blur-xl transition hover:-translate-y-0.5 hover:shadow-card"
+            style={{
+              backgroundColor: 'var(--surface-glass)',
+              border: '1px solid var(--border-soft)',
+            }}
           >
-            <div className="h-16 -mx-4 -mt-4 mb-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-t-lg" />
-            <h3 className="font-semibold truncate">{b.name}</h3>
-            <p className="text-xs text-text-secondary mt-1">
-              {b._count?.items ?? 0} items · {b.kind.toLowerCase()}
+            <div
+              className="h-16 -mx-4 -mt-4 mb-3 rounded-t-xl relative overflow-hidden"
+              style={{ background: 'var(--brand-gradient)' }}
+            >
+              <div
+                className="absolute inset-0 opacity-60"
+                style={{ background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.25), transparent 60%)' }}
+              />
+            </div>
+            <h3 className="font-semibold truncate text-text-primary">{b.name}</h3>
+            <p className="text-xs text-text-muted mt-1">
+              {b._count?.items ?? 0} tarea{b._count?.items === 1 ? '' : 's'} · {b.kind.toLowerCase()}
             </p>
           </Link>
         ))}
 
         <button
           onClick={() => setModalOpen(true)}
-          className="bg-surface rounded-lg border-2 border-dashed border-border-strong p-4 hover:border-accent hover:bg-accent-soft text-text-secondary hover:text-accent transition flex flex-col items-center justify-center min-h-[120px]"
+          className="rounded-xl p-4 transition flex flex-col items-center justify-center min-h-[140px] text-text-muted hover:text-accent hover:-translate-y-0.5"
+          style={{
+            backgroundColor: 'transparent',
+            border: '1.5px dashed var(--border-soft)',
+          }}
         >
           <div className="text-3xl leading-none">+</div>
           <div className="text-sm mt-1">Create Board</div>

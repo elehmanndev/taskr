@@ -48,10 +48,11 @@ export default function BoardPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 pt-4 pb-2 border-b border-border bg-surface shrink-0">
-        <h1 className="text-xl font-bold">{board.name}</h1>
-        {board.description && <p className="text-sm text-text-secondary mt-0.5">{board.description}</p>}
-      </div>
+      {board.description && (
+        <div className="px-6 pt-3 pb-2 shrink-0">
+          <p className="text-sm text-text-secondary">{board.description}</p>
+        </div>
+      )}
       <div className="flex-1 min-h-0">
         <BoardView board={board} />
       </div>

@@ -196,4 +196,69 @@ export async function itemRoutes(app: FastifyInstance) {
     if (!item) return reply.code(404).send({ error: 'Item not found' })
     return item
   })
+
+  // Add an assignee to an item. Validates the user shares an org with the board.
+  app.post('/:itemId/assignees', { onRequest: auth.onRequest, preHandler: requireItemAccess }, async (request, reply) => {
+    const { itemId } = request.params as { itemId: string }
+    const { userId } = request.body as { userId: string }
+    const boardId = ((request as any).item as { boardId: string }).boardId
+    const board = await prisma.board.findUnique({ where: { id: boardId }, select: { orgId: true } })
+    if (!board) return reply.code(404).send({ error: 'Board not found' })
+
+    const member = await prisma.orgMember.findUnique({
+      where: { orgId_userId: { orgId: board.orgId, userId } },
+      select: { userId: true },
+    })
+    if (!member) return reply.code(400).send({ error: 'User not in board organization' })
+
+    await prisma.itemAssignee.upsert({
+      where: { itemId_userId: { itemId, userId } },
+      create: { itemId, userId },
+      update: {},
+    })
+
+    const updated = await prisma.item.findUnique({
+      where: { id: itemId },
+      include: {
+        assignees: { include: { user: true } },
+        _count: { select: { comments: true } },
+      },
+    })
+    if (updated) emitToBoard(boardId, 'item:updated', updated)
+
+    await automationQueue.add('trigger', {
+      boardId,
+      triggerType: 'ASSIGNEE_CHANGED',
+      itemId,
+      payload: { addedUserId: userId },
+    })
+
+    return updated
+  })
+
+  // Remove an assignee from an item.
+  app.delete('/:itemId/assignees/:userId', { onRequest: auth.onRequest, preHandler: requireItemAccess }, async (request, reply) => {
+    const { itemId, userId } = request.params as { itemId: string; userId: string }
+    const boardId = ((request as any).item as { boardId: string }).boardId
+
+    await prisma.itemAssignee.deleteMany({ where: { itemId, userId } })
+
+    const updated = await prisma.item.findUnique({
+      where: { id: itemId },
+      include: {
+        assignees: { include: { user: true } },
+        _count: { select: { comments: true } },
+      },
+    })
+    if (updated) emitToBoard(boardId, 'item:updated', updated)
+
+    await automationQueue.add('trigger', {
+      boardId,
+      triggerType: 'ASSIGNEE_CHANGED',
+      itemId,
+      payload: { removedUserId: userId },
+    })
+
+    return reply.code(204).send()
+  })
 }

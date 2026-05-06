@@ -32,7 +32,7 @@ export default function ColumnCell({ column, item, onChange, groupColor }: Colum
       )
     }
     case 'PEOPLE':
-      return <PeoplePicker assignees={item.assignees} />
+      return <PeoplePicker itemId={item.id} assignees={item.assignees} />
 
     case 'DATE':
       return <DateCell value={value} onChange={(v) => onChange(column.id, v)} />

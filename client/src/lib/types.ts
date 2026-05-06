@@ -80,7 +80,11 @@ export interface Group {
   color: string
   position: number
   collapsed: boolean
-  items: Item[]
+  /** undefined = not loaded yet (lazy). Empty array = loaded but empty. */
+  items?: Item[]
+  /** undefined = haven't fetched. null = fully loaded. string = position cursor for next page. */
+  nextCursor?: string | null
+  _count?: { items: number }
 }
 
 export interface Board {

@@ -5,9 +5,12 @@ import type { Board, Group, Item, Column } from '../lib/types'
 interface BoardState {
   board: Board | null
   loading: boolean
+  /** groupIds that are currently fetching items */
+  loadingGroupItems: Record<string, boolean>
   error: string | null
 
   loadBoard: (boardId: string) => Promise<void>
+  loadGroupItems: (groupId: string) => Promise<void>
   clearBoard: () => void
 
   // Local mutations (optimistic + socket-driven)
@@ -32,10 +35,11 @@ interface BoardState {
 export const useBoardStore = create<BoardState>((set, get) => ({
   board: null,
   loading: false,
+  loadingGroupItems: {},
   error: null,
 
   loadBoard: async (boardId) => {
-    set({ loading: true, error: null })
+    set({ loading: true, error: null, loadingGroupItems: {} })
     try {
       const board = await api.get<Board>(`/api/boards/${boardId}`)
       set({ board, loading: false })
@@ -44,29 +48,68 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     }
   },
 
-  clearBoard: () => set({ board: null, error: null }),
+  loadGroupItems: async (groupId) => {
+    const board = get().board
+    if (!board) return
+    const group = board.groups.find((g) => g.id === groupId)
+    if (!group) return
+    if (group.nextCursor === null) return // already fully loaded
+    if (get().loadingGroupItems[groupId]) return
+    set((s) => ({ loadingGroupItems: { ...s.loadingGroupItems, [groupId]: true } }))
+    try {
+      const cursorParam = group.nextCursor ? `?cursor=${encodeURIComponent(group.nextCursor)}` : ''
+      const { items, nextCursor } = await api.get<{ items: Item[]; nextCursor: string | null }>(
+        `/api/boards/${board.id}/groups/${groupId}/items${cursorParam}`
+      )
+      set((state) => {
+        if (!state.board) return state
+        return {
+          board: {
+            ...state.board,
+            groups: state.board.groups.map((g) => {
+              if (g.id !== groupId) return g
+              const merged = [...(g.items ?? []), ...items]
+              return { ...g, items: merged, nextCursor }
+            }),
+          },
+          loadingGroupItems: { ...state.loadingGroupItems, [groupId]: false },
+        }
+      })
+    } catch {
+      set((s) => ({ loadingGroupItems: { ...s.loadingGroupItems, [groupId]: false } }))
+    }
+  },
+
+  clearBoard: () => set({ board: null, error: null, loadingGroupItems: {} }),
 
   upsertItem: (item) => set((state) => {
     if (!state.board) return state
     const groups = state.board.groups.map((g) => {
+      if (g.items === undefined) return g
       if (g.id !== item.groupId) {
-        return { ...g, items: g.items.filter((i) => i.id !== item.id) }
+        const filtered = g.items.filter((i) => i.id !== item.id)
+        return filtered.length === g.items.length ? g : { ...g, items: filtered }
       }
       const exists = g.items.some((i) => i.id === item.id)
       const items = exists
         ? g.items.map((i) => (i.id === item.id ? { ...i, ...item } : i))
         : [...g.items, item].sort((a, b) => a.position - b.position)
-      return { ...g, items }
+      const count = g._count?.items
+      const _count = exists ? g._count : { items: (count ?? items.length - 1) + 1 }
+      return { ...g, items, _count }
     })
     return { board: { ...state.board, groups } }
   }),
 
   removeItem: (itemId) => set((state) => {
     if (!state.board) return state
-    const groups = state.board.groups.map((g) => ({
-      ...g,
-      items: g.items.filter((i) => i.id !== itemId),
-    }))
+    const groups = state.board.groups.map((g) => {
+      if (g.items === undefined) return g
+      const items = g.items.filter((i) => i.id !== itemId)
+      if (items.length === g.items.length) return g
+      const count = g._count?.items
+      return { ...g, items, _count: count != null ? { items: Math.max(0, count - 1) } : g._count }
+    })
     return { board: { ...state.board, groups } }
   }),
 
@@ -76,12 +119,13 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     for (const u of updates) byId[u.id] = { groupId: u.groupId, position: u.position }
 
     const itemsById: Record<string, Item> = {}
-    for (const g of state.board.groups) for (const i of g.items) itemsById[i.id] = i
+    for (const g of state.board.groups) for (const i of (g.items ?? [])) itemsById[i.id] = i
     for (const id of Object.keys(byId)) {
       if (itemsById[id]) itemsById[id] = { ...itemsById[id], ...byId[id] }
     }
 
     const groups = state.board.groups.map((g) => {
+      if (g.items === undefined) return g
       const items = Object.values(itemsById)
         .filter((i) => i.groupId === g.id)
         .sort((a, b) => a.position - b.position)
@@ -143,7 +187,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     const board = get().board
     if (!board) throw new Error('No board loaded')
     const group = await api.post<Group>(`/api/boards/${board.id}/groups`, { name, color })
-    get().addGroup({ ...group, items: [] })
+    get().addGroup({ ...group, items: [], _count: { items: 0 } })
     return group
   },
 

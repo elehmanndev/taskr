@@ -162,13 +162,12 @@ Scope was defined by reviewing Monday.com screenshots together. We are **not** c
 
 ### Visual style
 
-- **Font:** Inter everywhere (loaded from Google Fonts or self-hosted; no Figtree/Roboto fallback dance).
-- **Themes:** three, all shipped up-front.
-  - **Night** (default) — dark navy background, matches Monday's "Night" theme. This is what Eric uses.
-  - **Light** — white background.
-  - **Black** — true-black OLED-friendly.
-- Theme switcher lives in the avatar dropdown (top-right).
-- Implementation: CSS variables on `:root[data-theme="night|light|black"]`, Tailwind reads them via `theme.extend.colors` referencing the vars. No `dark:` classes.
+- **Font:** Inter everywhere (loaded from Google Fonts; no Figtree/Roboto fallback dance). Tried Outfit on 2026-05-07, reverted.
+- **Themes:** Night only. Day (Light) and Black were removed on 2026-05-07 — single dark theme keeps the design language consistent and avoids contrast bugs in the multi-color status pills. The `data-theme` attribute is still set on `<html>` for forward-compat, but only `night` exists.
+- Implementation: CSS variables on `:root[data-theme='night']`, Tailwind reads them via `theme.extend.colors` referencing the vars. No `dark:` classes.
+- **Popover system (2026-05-07):** every floating panel (status dropdowns, date pickers, mention/assignee suggesters, comment modal, navbar dropdowns, profile hover-card) reads from `--popover-bg` (#14162b) / `--popover-border` / `--popover-shadow` in `client/src/index.css`. Single source of truth — when building anything new, set `backgroundColor: 'var(--popover-bg)'` and inherit the look. App background uses the same #14162b so popovers blend with the page; group cards lift via `--surface` (#1f2240).
+- **Brand-color contrast helper:** `darkenForContrast(hex)` in `client/src/components/columns/colors.ts` darkens any bright brand hex (yellows, peach, light blues) just enough to keep white text readable. Use it for any colored chip/pill/header where the underlying color comes from user data — never switch text color to dark, always darken the bg instead. Used by StatusPill, GroupRow header icon block, GroupRow count pill, TimelineCell.
+- **Wordmark component:** `client/src/components/ui/Wordmark.tsx` renders the "taskr." mark — extrabold lowercase Inter with `letter-spacing: -0.055em` and a gradient period (accent → purple). Sizes: `sm` (navbar), `md`, `lg` (login). Use this anywhere Taskr is named, not raw text.
 - **Board visual priorities** (current BoardView is a generic table — this is the biggest gap):
   - Column header band visually distinct from cell content (darker, stronger weight, clear border).
   - Groups rendered as elevated **cards** with rounded corners + inner padding — not a flat stripe. Thick colored left bar + chevron + item count next to name.
@@ -254,6 +253,10 @@ Kanban view, timeline/Gantt view, workload view, Monday.labs-style apps marketpl
 - [ ] Remove `redis.ts` from lib (redis connection is already in `queues.ts`)
 - [x] User profile routes (`/api/users`: list/search, get by id, PATCH /me)
 - [x] Folder CRUD routes (`/api/folders`)
+- [x] **Item assignee endpoints** (2026-05-07): `POST /api/boards/:boardId/items/:itemId/assignees` and `DELETE .../:userId`. Validate the assignee shares an org with the board, emit `item:updated`, fire `ASSIGNEE_CHANGED` automation trigger.
+- [x] **Lazy item loading** (2026-05-07): `GET /api/boards/:boardId` no longer includes items — just groups + `_count.items`. New `GET /api/boards/:boardId/groups/:groupId/items?cursor=&limit=` returns one group's items paginated by position cursor (default 20). Initial board load went from multi-second / multi-MB to ~200ms / 9 KB on the 1872-item MKT VPT board.
+- [x] **Dev login bypass** (2026-05-07): `POST /auth/dev-login` (404 in production) issues a JWT cookie for a seeded `dev@taskr.local` user. Lets local sessions skip Google OAuth — used by the preview tooling and quick local testing.
+- [x] **Group default collapsed** (2026-05-07): `Group.collapsed @default(true)` in `schema.prisma` + DB updated. New imports/groups start collapsed so opening a board doesn't pre-fetch every group's items.
 
 ### Client
 Scaffolding + core wiring is done and deployed. Biggest remaining gap is visual fidelity — current board view is a generic table, not recognizably Monday-like.
@@ -274,29 +277,22 @@ Scaffolding + core wiring is done and deployed. Biggest remaining gap is visual 
 - [x] **Column sort from header** (2026-04-19): click a column header to cycle asc → desc → off; sort lives in BoardView local state, not yet persisted.
 - [x] **Collapsible sidebar** (2026-04-19): toggle button in sidebar header, width persisted to localStorage.
 - [x] **Visual pass #2** (2026-04-19, commits `9c733de` + `20e9063`): per-group sticky column header (replaces the single global sticky), per-column widths (`client/src/components/board/columnWidth.ts` — PEOPLE 96, STATUS 130, TIMELINE 180, CHECKBOX/RATING 80, LONG_TEXT 220, default 150), `PeoplePicker` +N overflow chip (2 avatars visible), 44px rows, new `TimelineCell` with `5 abr – 11 abr` (es-ES, no year) + click-to-open range popover, `DateCell` es-ES short format, Night/Black contrast bump (text tokens brightened + column headers and sidebar section labels promoted), colored group left bar constrained to items region (top:40 bottom:40) so it doesn't clash with rounded card corners.
-- [ ] **Visual pass #3 queue** (raised 2026-04-19 during live review — full detail in `project_ui_overhaul_plan.md`):
-  - Sticky scope too tight — fold group-name bar into the card so the sticky covers the whole group, not just the card region.
-  - Light theme unreadable — sidebar "BOARDS"/"ALL BOARDS" labels clipped on the left; overall contrast too faint.
-  - Comments → dedicated narrow column — move the hover speech-bubble + delete-X out of the item-name cell into their own cell (Monday's updates-column pattern).
-  - Drop dead columns from the imported board backend: PRODUCTO (×2), SUBPRODUCTO, ESTACIÓN (and possibly NÚMEROS 1 — Eric said "four", ask which stays). Update `server/scripts/import-monday.ts` and delete from DB.
-  - `Histórico` / archived group muted styling (low opacity, gray accent, collapsed-by-default).
-  - **Brand column** (part of ESTADO split) with per-brand hex palette — AMI INT amber, DJT dark teal, VPT purple, AMI green, **JUM orange/peach, BTR beige/tan** (swapped from Eric's first pass), AADIA periwinkle, SKI bright blue, SKI INT cyan, BUC pink/magenta.
-  - CRONOGRAMA rendered as colored pill with progress-bar fill (% elapsed between from→to) + hover tooltip showing total day count.
-  - Collapsed groups render as a compact card (no column row, no add-item row) — click anywhere to expand.
-  - Pull real status-pill colors from Monday via `monday-api-mcp` (currently falls back to gray `#C4C4C4`).
-  - ESTADO column restructure → split into Estado / Brand / Tipo de tarea / Etiquetas (requires migration of existing imported values).
-- [ ] Quick-update composer: icon exists on item-row hover, click is currently a no-op. Wire to open a popover that posts a Comment and fires notifications to everyone involved with the item.
+- [x] **Visual passes #3, #4, #5** (2026-04-19 → 2026-05-07): all original pass-3 queue items shipped (sticky fix, light theme dropped instead of fixing, dedicated updates column, dead columns removed, Histórico muting, brand column with real colors, CRONOGRAMA pill with progress fill, collapsed compact cards, real Monday status colors, ESTADO split). Then #5 went further — see "Session 2026-05-07" below.
+- [x] **Quick-update composer** (2026-04-19): wired. Click the speech-bubble icon → opens `UpdateModal` which loads/posts comments and updates the local count.
+- [x] **Comment thread UI** (2026-05-07): `UpdateModal` rebuilt with @mention autocomplete (search `/api/users?q=`, replaces `@xxx` on select, sends `mentions: [{userId, name}]` with the comment), URL linkification in rendered comments, mentions styled as accent pills via `renderBody()`. ⌘+Enter to publish.
+- [x] **People assignment UI** (2026-05-07): `PeoplePicker` rebuilt — click empty cell or any avatar opens a search popover with Asignados (× to remove) + Sugerencias sections. Hover an avatar = profile peek; click = picker (the previous behavior was reversed).
+- [x] **`ProfilePopover` → hover-card** (2026-05-07): now opens on hover with a 250ms delay and closes 200ms after leaving. Click no longer triggers the popover; pass `onClick` to attach behavior (used by PeoplePicker to open the assigner).
 - [ ] **Board width management**: pin first N columns (sticky-left with shadow), auto-collapse columns with no values on visible items, "focus mode" (user-selected subset). Extend the existing "Ocultar" concept.
 - [ ] **View tabs** below the board title: table / calendar / custom filtered-table. Requires the `BoardView` server model from the Design & UX Direction section (not yet migrated).
-- [ ] Remaining column cells: TimelinePicker, NumbersCell, DropdownCell, TagsCell, URLCell, RatingCell, ProgressCell, LongTextCell
+- [ ] Remaining column cells: NumbersCell, DropdownCell, TagsCell, URLCell, RatingCell, ProgressCell, LongTextCell. (TimelinePicker shipped as TimelineCell.)
 - [ ] Drag and drop with @dnd-kit (items between groups, group reorder) — dependency not yet installed
-- [ ] Item detail panel (slide-in/modal with column values, comments, attachments)
-- [ ] Comment thread UI (text input with @mention autocomplete, replies, edit/delete)
+- [ ] Item detail panel (slide-in/modal with column values, comments, attachments) — partially served by UpdateModal but no full detail view yet
 - [ ] Notification bell + dropdown (store exists, no bell component yet)
 - [ ] Automation builder UI (trigger → condition → action; run history)
 - [ ] Board settings (columns, members, automations tabs)
 - [ ] Org settings (members invite/remove, workspaces)
 - [ ] Responsive layout polish (tablet/phone)
+- [ ] **Image paste / upload** in updates — server endpoint + storage under `data/uploads/` + paste handler. Discussed 2026-05-07, not built. Real lift, ~20 min.
 
 New pages in scope (from Design & UX Direction — none started):
 - [ ] Mi trabajo (cross-board aggregate)
@@ -307,6 +303,51 @@ New pages in scope (from Design & UX Direction — none started):
 - [ ] Profile page redesign (card-based with left tab nav)
 - [ ] Equipos (Teams — needs Team + TeamMember models)
 - [ ] Horarios (needs WorkSchedule + ScheduleException models)
+
+## Session 2026-05-07 — UI restructure + perf
+
+Big visual + structural pass. Key invariants for anything built going forward:
+
+### Layout
+- **Sidebar removed.** `AppLayout` is just `<Navbar />` + `<main><Outlet /></main>`. The `Sidebar.tsx` file still exists but is unused — keep around for the nav patterns until decided otherwise.
+- **Board navigation lives in the navbar.** Wordmark | Home icon (→ /dashboard) | board-selector pill (current board name with chevron, dropdown lists all org boards). Right side: avatar dropdown.
+- **No org selector.** Multi-org switching deferred — single org assumed.
+- **No `<h1>` on BoardPage.** Board name is in the navbar selector, no need to repeat it.
+
+### Group cards
+- All groups default-collapsed (`Group.collapsed @default(true)`). Existing imported groups were updated.
+- Each expanded group is a self-contained card with internal scroll (`max-height: 60vh`, `overflow-auto`). Items load 20 at a time via `loadGroupItems` in `boardStore`; an IntersectionObserver inside the scrollable area triggers the next page.
+- Collapsed and expanded headers are visually identical: neutral surface bg, brand-color icon block (40×40, rounded-xl) on the left containing the chevron, name in `text-text-primary`, count pill in `darkenForContrast(brand)` with white text. The only difference is what's below the header (collapsed: nothing; expanded: scrollable items + add-row).
+- Hover glow on collapsed cards via a blurred radial in the brand color.
+- Spread between collapsed cards: `mb-5` (20px).
+
+### Status / brand pills
+- Render as pills inside cells (not full-cell color blocks). `min-w-[75%] px-3.5 py-1.5 rounded-full`, white text, `darkenForContrast(brand)` bg.
+- Dropdowns use `--popover-bg`, `space-y-2`, hairline divider before the Clear option.
+
+### Cronograma (timeline) cells
+- **Upcoming** (status === 'upcoming'): outlined dashed pill in `darkenForContrast(brand)` with secondary text — visibly different from in-progress.
+- **Active / past**: solid darkened pill with a `rgba(255,255,255,0.4)` overlay covering `pct%` from the left. White text always.
+
+### Updates / comments
+- Speech-bubble icon: outlined Monday-style SVG (rounded square with bottom-left tail). Count number renders centered inside the bubble body (use `pb-[5px]` to offset the tail). Always visible at default opacity for items with comments; muted-and-hover-revealed when count is 0 — actually now always shown.
+- `UpdateModal`: rebuilt with the popover token system. Compose box has gradient Publicar button. @mention autocomplete fetches `/api/users?q=&orgId=`. URL pasting is auto-linkified in rendered comments via `renderBody()`. Mentions render as accent pills.
+
+### Assignment
+- `PeoplePicker` opens on cell click or avatar click. Lists current Asignados (with × to remove) + Sugerencias from `/api/users` filtered by typed query. Server validates org membership.
+- `ProfilePopover` is now a hover-card (open after 250ms hover, close 200ms after leave). Pass `onClick` to override click behavior — PeoplePicker passes a handler that opens the assigner.
+
+### Login
+- `taskr.` wordmark replaces the old block logo. Glass card on a soft radial-glow + dot-grid backdrop. Footer: `Reverse-Engineered by [github icon] ericll93/taskr`.
+- GSI script lazy-loaded inside `Login.tsx` (was global in `index.html`) — keeps the script off authenticated pages and unblocks headless screenshot tooling.
+
+### Terminology
+- Use **"Tareas"** (Spanish) for items in user-facing strings. Updated count labels, add-row placeholder, "Cargando…", dashboard card subtitle.
+
+### Pending from this session
+- Image paste in updates (need upload endpoint + `data/uploads/` storage + paste handler).
+- Sidebar.tsx file is unreferenced — delete or keep for later patterns.
+- Mention autocomplete only works in `UpdateModal` — apply to other rich-text inputs when they exist.
 
 ## Environment Variables
 

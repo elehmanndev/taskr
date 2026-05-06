@@ -1,14 +1,6 @@
 import { create } from 'zustand'
 
-export type Theme = 'night' | 'light' | 'black'
-
-const STORAGE_KEY = 'taskr.theme'
-
-function readInitial(): Theme {
-  const saved = localStorage.getItem(STORAGE_KEY)
-  if (saved === 'night' || saved === 'light' || saved === 'black') return saved
-  return 'night'
-}
+export type Theme = 'night'
 
 function apply(theme: Theme) {
   document.documentElement.setAttribute('data-theme', theme)
@@ -20,13 +12,11 @@ interface ThemeState {
 }
 
 export const useThemeStore = create<ThemeState>((set) => {
-  const initial = readInitial()
-  apply(initial)
+  apply('night')
   return {
-    theme: initial,
+    theme: 'night',
     setTheme: (t) => {
       apply(t)
-      localStorage.setItem(STORAGE_KEY, t)
       set({ theme: t })
     },
   }

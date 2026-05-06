@@ -1,0 +1,17 @@
+{
+  "name": "taskr",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Root dev orchestration — one command starts db+redis in Docker and runs server+client with live reload.",
+  "scripts": {
+    "predev": "docker compose up -d db redis",
+    "dev": "concurrently --names \"server,client\" --prefix-colors \"cyan,magenta\" --kill-others \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "stop": "docker compose stop db redis",
+    "seed": "npm --prefix server run seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

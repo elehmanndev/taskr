@@ -55,6 +55,34 @@ export async function groupRoutes(app: FastifyInstance) {
     emitToBoard(boardId, 'group:deleted', { groupId })
     return reply.code(204).send()
   })
+
+  // Paginated lazy-load for a group's items. Cursor = position of the last item
+  // already returned; client requests with cursor=undefined for first page.
+  app.get('/:groupId/items', { onRequest: auth.onRequest, preHandler: requireGroupAccess }, async (request) => {
+    const { groupId } = request.params as { groupId: string }
+    const q = request.query as { cursor?: string; limit?: string }
+    const limit = Math.min(Math.max(parseInt(q.limit ?? '20', 10) || 20, 1), 100)
+    const cursorPos = q.cursor != null ? parseInt(q.cursor, 10) : null
+
+    const items = await prisma.item.findMany({
+      where: {
+        groupId,
+        ...(cursorPos != null ? { position: { gt: cursorPos } } : {}),
+      },
+      orderBy: { position: 'asc' },
+      take: limit + 1, // peek one extra to detect end
+      include: {
+        assignees: { include: { user: true } },
+        _count: { select: { comments: true, attachments: true } },
+      },
+    })
+
+    const hasMore = items.length > limit
+    const page = hasMore ? items.slice(0, limit) : items
+    const nextCursor = hasMore ? String(page[page.length - 1].position) : null
+
+    return { items: page, nextCursor }
+  })
 }
 
 // ── Comments ──────────────────────────────────────────────────────────────────

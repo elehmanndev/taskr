@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 interface DateCellProps {
   value?: string | null
@@ -14,46 +15,109 @@ function formatDisplay(iso?: string | null) {
 }
 
 export default function DateCell({ value, onChange, readOnly }: DateCellProps) {
-  const [editing, setEditing] = useState(false)
-  const [local, setLocal] = useState(value ?? '')
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const [draft, setDraft] = useState(value ?? '')
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const popRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { setLocal(value ?? '') }, [value])
+  useEffect(() => { setDraft(value ?? '') }, [value])
+
+  useLayoutEffect(() => {
+    if (!open || !btnRef.current) return
+    const r = btnRef.current.getBoundingClientRect()
+    setPos({ top: r.bottom + 4, left: r.left })
+  }, [open])
 
   useEffect(() => {
-    if (editing) inputRef.current?.focus()
-  }, [editing])
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as Node
+      if (btnRef.current?.contains(t) || popRef.current?.contains(t)) return
+      commit()
+    }
+    const onScroll = () => commit()
+    window.addEventListener('mousedown', onClick)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      window.removeEventListener('mousedown', onClick)
+      window.removeEventListener('scroll', onScroll, true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, draft])
 
   const commit = () => {
-    setEditing(false)
-    const next = local || null
+    setOpen(false)
+    const next = draft || null
     if (next !== (value ?? null)) onChange(next)
   }
 
-  if (editing) {
-    return (
-      <input
-        ref={inputRef}
-        type="date"
-        value={local}
-        onChange={(e) => setLocal(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') commit()
-          if (e.key === 'Escape') { setLocal(value ?? ''); setEditing(false) }
-        }}
-        className="w-full h-full px-2 text-xs bg-surface outline-none"
-      />
-    )
+  const clear = () => {
+    setDraft('')
+    onChange(null)
+    setOpen(false)
   }
 
   return (
-    <button
-      disabled={readOnly}
-      onClick={() => setEditing(true)}
-      className="w-full h-full text-xs text-text-primary px-2 text-center hover:bg-surface-hover"
-    >
-      {formatDisplay(value) || <span className="text-text-muted">—</span>}
-    </button>
+    <div className="relative w-full h-full">
+      <button
+        ref={btnRef}
+        disabled={readOnly}
+        onClick={() => setOpen((o) => !o)}
+        className="w-full h-full text-xs text-text-primary px-2 text-center hover:bg-surface-hover"
+      >
+        {formatDisplay(value) || <span className="text-text-muted">—</span>}
+      </button>
+      {open && pos && createPortal(
+        <div
+          ref={popRef}
+          className="fixed z-[100] w-60 rounded-2xl overflow-hidden p-4"
+          style={{
+            top: pos.top,
+            left: pos.left,
+            backgroundColor: 'var(--popover-bg)',
+            border: '1px solid var(--popover-border)',
+            boxShadow: 'var(--popover-shadow)',
+          }}
+        >
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted mb-3">
+            Fecha
+          </div>
+          <input
+            type="date"
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commit()
+              if (e.key === 'Escape') { setDraft(value ?? ''); setOpen(false) }
+            }}
+            className="w-full h-9 px-2.5 text-sm rounded-lg outline-none transition focus:ring-2 focus:ring-accent/40 mb-4"
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.10)',
+              color: 'var(--text-primary)',
+              colorScheme: 'dark',
+            }}
+          />
+          <div className="flex items-center justify-between">
+            <button
+              onClick={clear}
+              className="text-xs text-text-muted hover:text-danger transition"
+            >
+              Vaciar
+            </button>
+            <button
+              onClick={commit}
+              className="text-xs px-3.5 py-1.5 rounded-lg font-medium text-white hover:opacity-95 transition"
+              style={{ background: 'var(--brand-gradient)' }}
+            >
+              Aplicar
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </div>
   )
 }

@@ -75,13 +75,7 @@ export async function boardRoutes(app: FastifyInstance) {
         groups: {
           orderBy: { position: 'asc' },
           include: {
-            items: {
-              orderBy: { position: 'asc' },
-              include: {
-                assignees: { include: { user: true } },
-                _count: { select: { comments: true, attachments: true } },
-              },
-            },
+            _count: { select: { items: true } },
           },
         },
         members: { include: { board: false } },
