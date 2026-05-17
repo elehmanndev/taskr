@@ -14,7 +14,7 @@ model Org {
   name         String
   slug         String   @unique
   logoUrl      String?
-  emailDomains Json     @default("[]")   // ["viajesparati.com"] — Google sign-ins with matching domain auto-join
+  emailDomains Json     @default("[]")   // ["yourcompany.com"] — Google sign-ins with matching domain auto-join
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

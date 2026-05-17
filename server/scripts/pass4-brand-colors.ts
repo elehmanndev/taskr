@@ -12,8 +12,8 @@ import { PrismaClient, ColumnType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const ORG_SLUG = process.env.ORG_SLUG ?? 'viajesparati';
-const IMPORTED_BOARD_NAME = 'MKT VPT (imported)';
+const ORG_SLUG = process.env.ORG_SLUG ?? 'my-org';
+const IMPORTED_BOARD_NAME = process.env.BOARD_NAME ?? 'My Board (imported)';
 
 const BRAND_OVERRIDES: Record<string, string> = {
   BTR: '#7F5347',

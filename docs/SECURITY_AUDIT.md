@@ -15,7 +15,7 @@ Spawn a general-purpose agent against `server/src/routes/*.ts`, `server/src/serv
 5. Stored XSS in comments / email template interpolation.
 6. Weak secret fallbacks, missing rate limit, missing helmet.
 
-## Phase 2 — Live probing against `taskr.elehmann.dev`
+## Phase 2 — Live probing against `your-deployed-domain`
 
 ### 2a — Unauthenticated surface
 
@@ -32,7 +32,7 @@ Script lives at `scripts/probe-unauth.sh` (TODO: extract from session).
 ### 2b — Authenticated cross-tenant probing
 
 Needs:
-1. Attacker JWT — grab `token` cookie from browser on `taskr.elehmann.dev`.
+1. Attacker JWT — grab `token` cookie from browser on `your-deployed-domain`.
 2. Victim org + board + item that attacker is NOT a member of. Seed via `server/scripts/seed-victim.mjs` (run from worktree if schema has drifted from main). Script prints JSON with 6 IDs.
 
 **Setup command (PowerShell, main repo):**
@@ -50,7 +50,7 @@ Delete the victim org — cascades to workspaces, boards, groups, items, comment
 ## Phase 3 — Edge / Cloudflare infra (pending)
 
 - Cloudflare zone: WAF rules, Bot Fight Mode, rate limit rules, Super Bot Fight config.
-- Consider Cloudflare Access in front of `taskr.elehmann.dev` for admin-only deployments.
+- Consider Cloudflare Access in front of `your-deployed-domain` for admin-only deployments.
 - Tunnel config hygiene — tunnel token rotation, no wildcard hostnames.
 - Check cloudflared container: pinned version, restart policy, resource limits.
 

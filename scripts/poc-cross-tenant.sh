@@ -3,12 +3,12 @@
 # Before fix: all tests return 2xx. After fix: expect 403/404.
 #
 # Env vars required:
-#   ATTACKER_JWT=<jwt cookie value>   (grab from browser on deployed domain)
+#   ATTACKER_JWT=<jwt cookie value>   (grab from browser on your deployed domain)
 #   VICTIM_ORG, VICTIM_USER, VICTIM_BOARD, VICTIM_GROUP, VICTIM_ITEM
 #     (printed by server/scripts/seed-victim.mjs)
-#   BASE=https://taskr.example.com    (optional; defaults to prod domain)
+#   BASE=https://your-deployed-domain (required — your Taskr deployment URL)
 
-BASE="${BASE:-https://taskr.elehmann.dev}"
+BASE="${BASE:?set BASE=https://your-deployed-domain before running}"
 JWT="${ATTACKER_JWT:?set ATTACKER_JWT=... before running}"
 ORG="${VICTIM_ORG:?set VICTIM_ORG=...}"
 USER="${VICTIM_USER:?set VICTIM_USER=...}"
@@ -36,7 +36,7 @@ hit() {
 }
 
 echo "========================================"
-echo " LIVE CROSS-TENANT POC — taskr.elehmann.dev"
+echo " LIVE CROSS-TENANT POC — $BASE"
 echo "========================================"
 echo ""
 

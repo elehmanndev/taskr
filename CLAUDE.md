@@ -338,7 +338,7 @@ Big visual + structural pass. Key invariants for anything built going forward:
 - `ProfilePopover` is now a hover-card (open after 250ms hover, close 200ms after leave). Pass `onClick` to override click behavior — PeoplePicker passes a handler that opens the assigner.
 
 ### Login
-- `taskr.` wordmark replaces the old block logo. Glass card on a soft radial-glow + dot-grid backdrop. Footer: `Reverse-Engineered by [github icon] elehmanndev/taskr`.
+- `taskr.` wordmark replaces the old block logo. Glass card on a soft radial-glow + dot-grid backdrop. Footer: `Reverse-Engineered by [github icon]` + the repo URL.
 - GSI script lazy-loaded inside `Login.tsx` (was global in `index.html`) — keeps the script off authenticated pages and unblocks headless screenshot tooling.
 
 ### Terminology

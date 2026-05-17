@@ -61,8 +61,10 @@ services:
     ports:
       - '${CLIENT_PORT:-3000}:80'
 
-  # Auto-deploy webhook — receives GitHub pings and rebuilds the app
-  # Reached via Cloudflare Tunnel at deploy-taskr.elehmann.dev → http://webhook:9000
+  # Auto-deploy webhook — receives GitHub pings and rebuilds the app.
+  # Expose via your own Cloudflare Tunnel hostname → http://webhook:9000
+  # (e.g. deploy-taskr.example.com). Then register that URL as the GitHub
+  # webhook payload URL on your fork.
   webhook:
     build: ./deploy
     container_name: taskr-webhook

@@ -10,4 +10,7 @@ data/
 LOCAL.md
 STATUS.md
 server/scripts/monday-dump/
+server/scripts/MONDAY_IMPORT_STATE.md
+server/scripts/analyze-items.cjs
+server/scripts/fetch-monday-by-group.ts
 MONDAY.md

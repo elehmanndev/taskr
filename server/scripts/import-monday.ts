@@ -25,8 +25,10 @@ import { fileURLToPath } from 'node:url';
 
 const prisma = new PrismaClient();
 
-const ORG_SLUG = process.env.ORG_SLUG ?? 'viajesparati';
-const IMPORTED_BOARD_NAME = 'MKT VPT (imported)';
+const ORG_SLUG = process.env.ORG_SLUG ?? 'my-org';
+const ORG_EMAIL_DOMAIN = process.env.ORG_EMAIL_DOMAIN ?? null;
+const OWNER_EMAIL = process.env.OWNER_EMAIL ?? null;
+const IMPORTED_BOARD_NAME = process.env.BOARD_NAME ?? 'My Board (imported)';
 const FILTER_FROM_DATE = process.env.FILTER_FROM_DATE ?? new Date().toISOString().slice(0, 10); // only import items with date4 >= this date (default: today)
 const DUMP_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'monday-dump');
 
@@ -124,13 +126,15 @@ async function main() {
   const org = await prisma.org.findUnique({ where: { slug: ORG_SLUG } });
   if (!org) throw new Error(`Org "${ORG_SLUG}" not found. Create it first.`);
 
-  // Ensure viajesparati.com auto-joins this org.
-  const existingDomains = Array.isArray(org.emailDomains) ? (org.emailDomains as string[]) : [];
-  if (!existingDomains.includes('viajesparati.com')) {
-    await prisma.org.update({
-      where: { id: org.id },
-      data: { emailDomains: [...existingDomains, 'viajesparati.com'] },
-    });
+  // Ensure ORG_EMAIL_DOMAIN auto-joins this org (if provided).
+  if (ORG_EMAIL_DOMAIN) {
+    const existingDomains = Array.isArray(org.emailDomains) ? (org.emailDomains as string[]) : [];
+    if (!existingDomains.includes(ORG_EMAIL_DOMAIN)) {
+      await prisma.org.update({
+        where: { id: org.id },
+        data: { emailDomains: [...existingDomains, ORG_EMAIL_DOMAIN] },
+      });
+    }
   }
 
   console.log(`Importing to org ${org.name} (${org.id})`);
@@ -250,7 +254,10 @@ async function main() {
   console.log(`Created ${mondayGroupIdToTaskrId.size} groups`);
 
   // --- Items (routed to target groups by source file) ---
-  const me = await prisma.user.findUnique({ where: { email: 'elehmann@viajesparati.com' } });
+  // OWNER_EMAIL lets us pre-assign all imported items to the runner. Optional.
+  const me = OWNER_EMAIL
+    ? await prisma.user.findUnique({ where: { email: OWNER_EMAIL } })
+    : null;
 
   let itemPos = 0;
   let assigneeCount = 0;
