@@ -96,38 +96,19 @@ export default function ProfilePopover({ userId, name, avatarUrl, size = 'sm', o
                 <Avatar name={user.name} src={user.avatarUrl} size="md" />
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-base text-white truncate">{user.name}</div>
-                  {user.title && (
-                    <div className="text-[13px] text-text-secondary truncate mt-0.5">{user.title}</div>
-                  )}
                   {user.department && (
-                    <div className="text-[12px] text-text-muted truncate">{user.department}</div>
+                    <div className="text-[13px] text-text-secondary truncate mt-0.5">
+                      {user.department}
+                      {user.group && <span className="text-text-muted"> · {user.group}</span>}
+                    </div>
                   )}
                 </div>
               </div>
 
-              {user.bio && (
-                <p className="mt-3 text-xs text-text-primary/90 line-clamp-4 whitespace-pre-wrap leading-relaxed">
-                  {user.bio}
+              {user.claudeMd && (
+                <p className="mt-3 text-xs text-text-primary/90 line-clamp-4 whitespace-pre-wrap leading-relaxed font-mono">
+                  {user.claudeMd}
                 </p>
-              )}
-
-              {(user.skills?.length ?? 0) > 0 && (
-                <div className="mt-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted mb-1.5">
-                    Skills
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {user.skills!.slice(0, 8).map((s) => (
-                      <span
-                        key={s}
-                        className="px-2 py-0.5 rounded-full text-[11px] font-medium"
-                        style={{ color: 'var(--accent)', backgroundColor: 'var(--accent-soft)' }}
-                      >
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </div>
               )}
 
               {(user.expertise?.length ?? 0) > 0 && (

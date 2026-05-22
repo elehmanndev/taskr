@@ -31,16 +31,12 @@ model User {
   googleId  String?  @unique
 
   // Profile
-  title      String?             // Job title, e.g. "Senior Software Engineer"
   department String?             // e.g. "Marketing", "Engineering"
-  bio        String?  @db.Text   // Free-form description
-  skills     Json     @default("[]")  // ["React", "PostgreSQL", "Figma"]
+  group      String?             // Sub-department, e.g. "Brand", "Backend"
+  claudeMd   String?  @db.Text   // User's CLAUDE.md (free-form context about themselves)
   expertise  Json     @default("[]")  // ["OAuth", "Payments", "Mobile UX"]
-  phone      String?
-  timezone   String?             // IANA, e.g. "Europe/Madrid"
-  location   String?             // "Barcelona, Spain"
-  linkedinUrl String?
-  githubUrl   String?
+  languages  Json     @default("{}")  // { es: 1, ca: 2, en: 3, ... } level 1 (native) → 4 (basic)
+  slackUrl   String?             // Link to the user's Slack profile
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

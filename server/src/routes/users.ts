@@ -2,19 +2,17 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 
+const LANGUAGE_CODES = ['es', 'ca', 'en', 'fr', 'pt', 'de', 'it'] as const
+
 const ProfileUpdateSchema = z.object({
   name:        z.string().min(1).max(120).optional(),
   avatarUrl:   z.string().url().nullable().optional(),
-  title:       z.string().max(120).nullable().optional(),
   department:  z.string().max(120).nullable().optional(),
-  bio:         z.string().max(4000).nullable().optional(),
-  skills:      z.array(z.string().min(1).max(60)).max(50).optional(),
+  group:       z.string().max(120).nullable().optional(),
+  claudeMd:    z.string().max(20000).nullable().optional(),
   expertise:   z.array(z.string().min(1).max(60)).max(50).optional(),
-  phone:       z.string().max(40).nullable().optional(),
-  timezone:    z.string().max(60).nullable().optional(),
-  location:    z.string().max(120).nullable().optional(),
-  linkedinUrl: z.string().url().nullable().optional(),
-  githubUrl:   z.string().url().nullable().optional(),
+  languages:   z.record(z.enum(LANGUAGE_CODES), z.number().int().min(1).max(4)).optional(),
+  slackUrl:    z.string().url().nullable().optional(),
 })
 
 const PUBLIC_PROFILE_FIELDS = {
@@ -22,16 +20,12 @@ const PUBLIC_PROFILE_FIELDS = {
   email: true,
   name: true,
   avatarUrl: true,
-  title: true,
   department: true,
-  bio: true,
-  skills: true,
+  group: true,
+  claudeMd: true,
   expertise: true,
-  phone: true,
-  timezone: true,
-  location: true,
-  linkedinUrl: true,
-  githubUrl: true,
+  languages: true,
+  slackUrl: true,
   createdAt: true,
 } as const
 
@@ -60,8 +54,8 @@ export async function userRoutes(app: FastifyInstance) {
           OR: [
             { name:       { contains: q } },
             { email:      { contains: q } },
-            { title:      { contains: q } },
             { department: { contains: q } },
+            { group:      { contains: q } },
           ],
         } : {}),
       },

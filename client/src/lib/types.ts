@@ -4,21 +4,20 @@ export type ColumnType =
   | 'PROGRESS' | 'TIME_TRACKING' | 'CREATION_LOG' | 'LAST_UPDATED'
   | 'EMAIL' | 'PHONE' | 'LINK' | 'FILE'
 
+export type LanguageCode = 'es' | 'ca' | 'en' | 'fr' | 'pt' | 'de' | 'it'
+export type LanguageLevel = 1 | 2 | 3 | 4
+
 export interface User {
   id: string
   email: string
   name: string
   avatarUrl?: string | null
-  title?: string | null
   department?: string | null
-  bio?: string | null
-  skills?: string[]
+  group?: string | null
+  claudeMd?: string | null
   expertise?: string[]
-  phone?: string | null
-  timezone?: string | null
-  location?: string | null
-  linkedinUrl?: string | null
-  githubUrl?: string | null
+  languages?: Partial<Record<LanguageCode, LanguageLevel>>
+  slackUrl?: string | null
   createdAt?: string
 }
 
