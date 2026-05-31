@@ -196,7 +196,7 @@ Order of attack: **(a) board visual overhaul first**, then the new sections belo
 11. **Etiquetas (Tags) index** — org-level tag registry page, alphabetical sections, usage count per tag. Tags become first-class entities (migration required — see Data Model below).
 12. **Spotlight global search** — modal over the app, large search input, recent items, keyboard navigation (↑↓ + Enter). Mixed results: boards, workspaces, items, people.
 13. **Equipos (Teams)** — sub-org groupings distinct from department; user can be in many. Assignable like people; `@teamname` mentions expand to team members.
-14. **Horarios (Schedules)** — user work schedules (fixed weekly or rotating shift pattern) editable from profile. Page with department filter, daily view, monthly calendar view with pagination. Useful for shift-based teams; M–F teams just show the default.
+14. **Horarios (Schedules)** — **a side feature of each department, NOT a board.** Boards are for tasks; the roster is a different data shape (person × day → shift) and gets its own module hanging off the department. You open a department and its roster sits alongside its people. M–F desk departments show a fixed weekly default; shift-based departments (Booking) assign a **shift template** per person per day. Daily view + monthly calendar with pagination, scoped to that department. See "Shift rostering + daily assignment" below for the full spec (reverse-engineered from the `HORARIOS BOOKING 2026` + `Planning diario` Google Sheets, 2026-05-31).
 
 ### Data model additions (plan — not yet migrated)
 
@@ -204,13 +204,37 @@ Order of attack: **(a) board visual overhaul first**, then the new sections belo
 - **Tag** (new): `id, orgId, name, color, createdAt`. Migrate existing free-form tag strings from TAGS column values into this table + join.
 - **Team** (new): `id, orgId, name, color, createdAt`.
 - **TeamMember** (new): `teamId, userId, role?`.
-- **WorkSchedule** (new): `userId, pattern (JSON: weekly shifts or rotation), timezone`.
-- **ScheduleException** (new): `userId, date, type (vacation|sick|swap|other), shift?`.
+- **Department** (new, or promote the current `User.department` string): `id, orgId, name`. The roster is a side feature of a department, so department needs to be at least enumerable. Keep `User.departmentId` (was a free string). OPEN: confirm whether a desk team and Booking are both "departments" or if Booking is a department with sub-teams.
+- **ShiftTemplate** (new): `id, departmentId, label, color, segments (JSON: [{ start, end }], supports split shifts), crossesMidnight`. Defined once per department, picked from a dropdown — kills the spreadsheet's typo-variants (`16,00` vs `16,30` vs `16,15`, `:` vs `,`, `8-13/13:30-16:30` vs `8 a 13 y 13,30 a 16,30`) and makes hours computable. **Definitive Booking set = 8 bands** (reverse-engineered across all 12 months, 2026-05-31; **no seasonal variation — Jul/Aug = Dec**): Mañana 1 `8–13 / 13:30–16:30`, Mañana 2 `9–14 / 14:30–17:30`, Tarde `13:30–17 / 17:30–22`, Cierre `16–20 / 20:30–24`, Nocturno `23:59–07:59` (crosses midnight), Seguida tarde `14–21` (continuous), Tarde corta `11–17 / 17:30–19:30`, Continuo `9:30–15:30`. The ~50+ literal cell strings collapse to these 8; the `±30min` end tweaks, recuperation hours, and one-off personal shifts (e.g. Reinier `10:14–17:21`) are per-assignment `customSegments`, NOT templates. Seeded by `POST /api/schedules/templates/seed-defaults`.
+- **ShiftAssignment** (new): `id, userId, date, templateId?, customSegments? (JSON, for one-off hours), role? (e.g. responsable_mañanas | responsable_tardes), note? (swap notes: "trabaja a cambio de librar el 30/11"), status (working | off | vacation | sick)`. One row per person per day — replaces both the free-text roster cell AND the old `ScheduleException`. Coverage counts (the sheet's hand-tallied `14/10` row) become automatic: sum assignments per time-slot per day.
+- **User** (routing attributes for skill-aware assignment): `languages (JSON: [{ code: 'pt'|'fr'|'en'|'de'|'it', level: 1|2|3, spoken: bool, written: bool }])`, `brandPrefs (JSON: ordered ['BUC','AMI','ESQ','J2S'])`. Structures the `Idiomas` matrix + brand preference so the daily picker can sort by fit. Extends the existing `skills[]`/`expertise[]` rather than replacing them.
 - **Comment**: add `likes` (user-list relation) and a per-user **bookmark/favorite** flag (separate pivot table).
 - **BoardView** (new): `id, boardId, name, type (TABLE|CALENDAR|FILTERED_TABLE), filters JSON, sortBy JSON, groupBy, hiddenColumns JSON, order`. Replaces the ad-hoc "views" we don't have yet.
 - **Favorites** (new pivot): `userId, entityType (BOARD|ITEM|COMMENT), entityId`.
 
 Do the migration in one pass before or alongside building the matching UI, not piecemeal.
+
+### Shift rostering + daily assignment (reverse-engineered 2026-05-31)
+
+The Booking team runs three Google Sheets that taskr should collapse into one flow. Reading them defined the model above. The pipeline is **roster → daily plan**, and it's really a constraint-matching problem the responsable does by hand every morning.
+
+**Source sheets:**
+- `HORARIOS BOOKING 2026` — one tab per month, weeks stacked vertically, ~34 people × 7 days. Each cell is a free-text shift. This is the **roster**.
+- `Planning diario` — one tab per responsable. Each day: the people on shift (copied from the roster) are distributed across **brands** (BUC/AMI/ESQ/J2S/extras) × **task queues** (Urg, Prioris, Vi, Verdes, ROJOS by language PT/FR/EN/DE/IT, Negros ahir/avui, Premium, Docus, Transfers…). Verde/Rojo/Negro = reservation status colors.
+- Support tabs: `Idiomas` (language matrix — PT/FR/EN/DE/IT × Nivel 1–3 × hablado/escrito), `Control PC`, `hoja para cambios` (swap scratchpad).
+
+**The three inputs the responsable cross-references manually each day:**
+1. **Supply** — who's on shift today + their hours (a morning-only person can't take an evening queue). → from the **roster** (Horarios, the per-department side feature).
+2. **Demand** — which task queues exist today, per brand/type. → **task surface** (board-like; this is the only board-shaped piece).
+3. **Fit** — each person's language level, brand preference, responsable role. → **profile routing attributes** (`languages`, `brandPrefs`).
+
+**What taskr automates:** taskr already holds all three (roster, tasks, profiles), so the daily plan stops being a memory exercise. The killer UX: clicking a queue's people cell (e.g. `ROJOS PT`) opens a picker showing **only people on shift today**, **best-fit first** (speaks Portuguese, prefers the brand). The human still decides; taskr does the lookup. With every input structured, "suggest assignments" / auto-fill becomes a later, cheap addition.
+
+**Hard boundaries (don't blur these):**
+- **Horarios (roster) is NOT a board.** It's a per-department side feature with its own module + data shape. Do not model shifts as items/groups/columns.
+- **The daily plan IS task-shaped** and can be a board (or board-like view): groups = brands, items = queues, PEOPLE column = assignment, STATUS pills = Verde/Rojo/Negro.
+- The "on-shift-today" filter is the **bridge** between the roster module and the task surface — derived from `ShiftAssignment`, not stored on the board.
+- ~half of this already exists in taskr (boards, groups, items, PEOPLE picker, StatusPill, rich profiles). The genuinely new build is the roster module + the two profile routing fields + the on-shift filter on the picker.
 
 ### What we are explicitly NOT doing
 
@@ -302,7 +326,7 @@ New pages in scope (from Design & UX Direction — none started):
 - [ ] Spotlight global search modal
 - [ ] Profile page redesign (card-based with left tab nav)
 - [ ] Equipos (Teams — needs Team + TeamMember models)
-- [ ] Horarios (needs WorkSchedule + ScheduleException models)
+- [ ] Horarios — per-department roster side feature (needs Department + ShiftTemplate + ShiftAssignment models). NOT a board. Feeds the daily-plan picker via an "on-shift-today" filter. See "Shift rostering + daily assignment".
 
 ## Session 2026-05-07 — UI restructure + perf
 

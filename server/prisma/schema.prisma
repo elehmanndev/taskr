@@ -21,6 +21,7 @@ model Org {
   members    OrgMember[]
   workspaces Workspace[]
   boards     Board[]
+  shiftTemplates ShiftTemplate[]
 }
 
 model User {
@@ -47,6 +48,7 @@ model User {
   comments       Comment[]
   notifications  Notification[]
   automationsCreated Automation[]
+  shiftAssignments ShiftAssignment[]
 }
 
 model OrgMember {
@@ -397,6 +399,56 @@ enum RunStatus {
   SUCCESS
   FAILED
   SKIPPED
+}
+
+// ─── SCHEDULES (Horarios) ──────────────────────────────────────────────────────
+// Per-department shift roster. NOT a board — different data shape (person × day → shift).
+// `department` keys off the existing User.department string for now (draft); promote to a
+// first-class Department model later (see CLAUDE.md "Shift rostering + daily assignment").
+
+model ShiftTemplate {
+  id              String   @id @default(cuid())
+  orgId           String
+  department      String                       // matches User.department
+  label           String                       // "Mañana partida", "Tarde", "Noche"
+  color           String   @default("#0073EA")
+  segments        Json     @default("[]")       // [{ start: "08:00", end: "13:00" }, { start: "13:30", end: "16:30" }]
+  crossesMidnight Boolean  @default(false)       // night shift spanning 23:59 → 07:59
+  position        Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  org         Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  assignments ShiftAssignment[]
+
+  @@index([orgId, department])
+}
+
+model ShiftAssignment {
+  id             String      @id @default(cuid())
+  userId         String
+  date           DateTime    @db.Date            // the day this shift applies to
+  templateId     String?                          // null when status != WORKING
+  customSegments Json?                            // one-off hours overriding the template
+  role           String?                          // "responsable_mananas" | "responsable_tardes"
+  note           String?                          // swap notes, e.g. "trabaja a cambio de librar el 30/11"
+  status         ShiftStatus @default(WORKING)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template ShiftTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([templateId])
+}
+
+enum ShiftStatus {
+  WORKING
+  OFF          // libra / día libre (the spreadsheet's "X")
+  VACATION
+  SICK
 }
 
 // ─── WEBHOOKS ────────────────────────────────────────────────────────────────

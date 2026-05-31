@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import BoardPage from './pages/BoardPage'
 import Profile from './pages/Profile'
+import Horarios from './pages/Horarios'
 import AppLayout from './components/layout/AppLayout'
 import { useAuthStore } from './stores/authStore'
 
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/board/:boardId" element={<BoardPage />} />
+        <Route path="/horarios" element={<Horarios />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/users/:userId" element={<Profile />} />
       </Route>

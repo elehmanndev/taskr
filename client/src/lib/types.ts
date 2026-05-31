@@ -97,6 +97,48 @@ export interface Board {
   _count?: { items: number }
 }
 
+export type ShiftStatus = 'WORKING' | 'OFF' | 'VACATION' | 'SICK'
+
+export interface ShiftSegment {
+  start: string  // "08:00"
+  end: string    // "16:30"
+}
+
+export interface ShiftTemplate {
+  id: string
+  orgId: string
+  department: string
+  label: string
+  color: string
+  segments: ShiftSegment[]
+  crossesMidnight: boolean
+  position: number
+}
+
+export interface ShiftAssignment {
+  id: string
+  userId: string
+  date: string          // ISO; compare by YYYY-MM-DD prefix
+  templateId: string | null
+  role: string | null
+  note: string | null
+  status: ShiftStatus
+}
+
+export interface RosterUser {
+  id: string
+  name: string
+  avatarUrl?: string | null
+  group?: string | null
+  languages?: Partial<Record<LanguageCode, LanguageLevel>>
+}
+
+export interface Roster {
+  users: RosterUser[]
+  templates: ShiftTemplate[]
+  assignments: ShiftAssignment[]
+}
+
 export interface Notification {
   id: string
   userId: string

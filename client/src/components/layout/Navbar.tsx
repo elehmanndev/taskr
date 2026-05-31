@@ -18,6 +18,15 @@ function HomeIcon({ className = 'w-5 h-5' }: { className?: string }) {
   )
 }
 
+function CalendarIcon({ className = 'w-5 h-5' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="3.5" y="5" width="17" height="15" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export default function Navbar() {
   const { user, logout } = useAuthStore()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -56,6 +65,18 @@ export default function Navbar() {
           end
         >
           <HomeIcon />
+        </NavLink>
+
+        <NavLink
+          to="/horarios"
+          className={({ isActive }) =>
+            `w-9 h-9 flex items-center justify-center rounded-lg transition ${
+              isActive ? 'text-accent bg-accent-soft' : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
+            }`
+          }
+          title="Horarios · cuadrante de turnos"
+        >
+          <CalendarIcon />
         </NavLink>
       </div>
 

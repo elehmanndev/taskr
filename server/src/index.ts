@@ -12,6 +12,7 @@ import { boardRoutes } from './routes/boards.js'
 import { groupRoutes, commentRoutes } from './routes/groups.js'
 import { itemRoutes } from './routes/items.js'
 import { folderRoutes } from './routes/folders.js'
+import { scheduleRoutes } from './routes/schedules.js'
 import { automationRoutes, notificationRoutes } from './routes/automations.js'
 import { initSocket } from './lib/socket.js'
 import { startWorkers } from './workers/index.js'
@@ -71,6 +72,7 @@ await app.register(groupRoutes,        { prefix: '/api/boards/:boardId/groups' }
 await app.register(itemRoutes,         { prefix: '/api/boards/:boardId/items' })
 await app.register(commentRoutes,      { prefix: '/api/items/:itemId/comments' })
 await app.register(folderRoutes,       { prefix: '/api/folders' })
+await app.register(scheduleRoutes,     { prefix: '/api/schedules' })
 await app.register(automationRoutes,   { prefix: '/api/boards/:boardId/automations' })
 await app.register(notificationRoutes, { prefix: '/api/notifications' })
 
